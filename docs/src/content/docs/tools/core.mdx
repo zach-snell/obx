@@ -7,6 +7,10 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 
 Core operations handle the fundamental tasks of reading, writing, and organizing notes and folders.
 
+:::caution[All paths are relative to the vault root]
+Every `path` parameter is **relative to the vault**, not an absolute filesystem path. Use `projects/todo.md`, not `/Users/you/vault/projects/todo.md`. Using absolute paths will create deeply nested directories inside your vault.
+:::
+
 ## Note Operations
 
 ### list-notes

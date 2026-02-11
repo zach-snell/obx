@@ -96,6 +96,8 @@ The server will be auto-discovered, or add to your config:
 
 **3. Start using it!** Ask your AI assistant to search your vault, create notes, manage tasks, etc.
 
+> **⚠️ Paths are relative to the vault root.** All `path` parameters use paths like `projects/todo.md`, not the full filesystem path. Using absolute paths will create nested directories inside your vault.
+
 ## Installation Options
 
 ### Pre-built Binaries (Recommended)
