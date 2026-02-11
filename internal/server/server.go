@@ -748,4 +748,57 @@ func registerTools(s *server.MCPServer, v *vault.Vault) {
 		),
 		v.AddTagToFrontmatterHandler,
 	)
+
+	// get-inline-fields
+	s.AddTool(
+		mcp.NewTool("get-inline-fields",
+			mcp.WithDescription("Extract Dataview-style inline fields (key:: value) from a note"),
+			mcp.WithString("path",
+				mcp.Required(),
+				mcp.Description("Path to the note"),
+			),
+		),
+		v.GetInlineFieldsHandler,
+	)
+
+	// set-inline-field
+	s.AddTool(
+		mcp.NewTool("set-inline-field",
+			mcp.WithDescription("Set or update a Dataview-style inline field"),
+			mcp.WithString("path",
+				mcp.Required(),
+				mcp.Description("Path to the note"),
+			),
+			mcp.WithString("key",
+				mcp.Required(),
+				mcp.Description("Field key"),
+			),
+			mcp.WithString("value",
+				mcp.Required(),
+				mcp.Description("Field value"),
+			),
+		),
+		v.SetInlineFieldHandler,
+	)
+
+	// query-inline-fields
+	s.AddTool(
+		mcp.NewTool("query-inline-fields",
+			mcp.WithDescription("Search notes by Dataview-style inline field values"),
+			mcp.WithString("key",
+				mcp.Required(),
+				mcp.Description("Field key to search for"),
+			),
+			mcp.WithString("value",
+				mcp.Description("Value to match (optional, matches all if empty)"),
+			),
+			mcp.WithString("operator",
+				mcp.Description("Match type: contains, equals, exists (default: contains)"),
+			),
+			mcp.WithString("directory",
+				mcp.Description("Limit search to specific directory"),
+			),
+		),
+		v.QueryInlineFieldsHandler,
+	)
 }
