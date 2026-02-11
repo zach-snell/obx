@@ -991,4 +991,90 @@ func registerTools(s *server.MCPServer, v *vault.Vault) {
 		),
 		v.GenerateIndexHandler,
 	)
+
+	// split-note
+	s.AddTool(
+		mcp.NewTool("split-note",
+			mcp.WithDescription("Split a note into multiple notes at heading boundaries"),
+			mcp.WithString("path",
+				mcp.Required(),
+				mcp.Description("Path to the note to split"),
+			),
+			mcp.WithNumber("level",
+				mcp.Description("Heading level to split at (1-6, default: 2)"),
+			),
+			mcp.WithBoolean("keep_original",
+				mcp.Description("Keep the original note after splitting (default: false)"),
+			),
+			mcp.WithString("output_dir",
+				mcp.Description("Directory for new notes (default: same as original)"),
+			),
+		),
+		v.SplitNoteHandler,
+	)
+
+	// merge-notes
+	s.AddTool(
+		mcp.NewTool("merge-notes",
+			mcp.WithDescription("Merge multiple notes into a single note"),
+			mcp.WithString("paths",
+				mcp.Required(),
+				mcp.Description("Comma-separated paths or JSON array of notes to merge"),
+			),
+			mcp.WithString("output",
+				mcp.Required(),
+				mcp.Description("Output path for the merged note"),
+			),
+			mcp.WithString("separator",
+				mcp.Description("Separator between merged content (default: horizontal rule)"),
+			),
+			mcp.WithBoolean("delete_originals",
+				mcp.Description("Delete original notes after merging (default: false)"),
+			),
+			mcp.WithBoolean("add_headings",
+				mcp.Description("Add filename as heading if note lacks one (default: true)"),
+			),
+		),
+		v.MergeNotesHandler,
+	)
+
+	// extract-section
+	s.AddTool(
+		mcp.NewTool("extract-section",
+			mcp.WithDescription("Extract a heading section to a new note"),
+			mcp.WithString("path",
+				mcp.Required(),
+				mcp.Description("Path to the source note"),
+			),
+			mcp.WithString("heading",
+				mcp.Required(),
+				mcp.Description("Heading text to extract"),
+			),
+			mcp.WithString("output",
+				mcp.Description("Output path (default: heading name as filename)"),
+			),
+			mcp.WithBoolean("remove_from_original",
+				mcp.Description("Remove section from original (default: true)"),
+			),
+			mcp.WithBoolean("add_link",
+				mcp.Description("Add link to extracted note in original (default: true)"),
+			),
+		),
+		v.ExtractSectionHandler,
+	)
+
+	// duplicate-note
+	s.AddTool(
+		mcp.NewTool("duplicate-note",
+			mcp.WithDescription("Create a copy of a note"),
+			mcp.WithString("path",
+				mcp.Required(),
+				mcp.Description("Path to the note to duplicate"),
+			),
+			mcp.WithString("output",
+				mcp.Description("Output path (default: original name + ' (copy)')"),
+			),
+		),
+		v.DuplicateNoteHandler,
+	)
 }
