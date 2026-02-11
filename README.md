@@ -86,21 +86,18 @@ Add to `opencode.json`:
 
 ## Features
 
-- **CRUD Operations**: List, read, write, delete, append notes
-- **Search**: Case-insensitive content search
+- **CRUD Operations**: List, read, write, delete, append, move notes
+- **Search**: Content search, tag search, frontmatter queries
 - **Task Parsing**: Extract checkboxes with due dates, priorities, tags
-- **Tag Search**: Find notes by tags (AND operation)
-- **MOC Discovery**: Find Maps of Content (#moc tagged notes)
-- **Backlinks**: Find all notes linking to a given note
-- **Frontmatter Queries**: Search notes by YAML properties
-- **Rename with Link Updates**: Refactor notes safely
-- **Daily Notes**: Get/create daily notes with configurable format
+- **Graph Analysis**: Backlinks, forward links, orphan detection, broken links
+- **Periodic Notes**: Daily, weekly, monthly, quarterly, yearly notes
 - **Templates**: Create notes from templates with variable substitution
+- **Canvas Support**: Read, create, and modify Obsidian canvas files
+- **Folder Management**: List, create, delete folders
 - **Vault Statistics**: Word counts, task completion %, top tags
-- **Pagination**: Limit/offset for large vaults
 - **Security**: Path traversal protection
 
-## MCP Tools (21 total)
+## MCP Tools (38 total)
 
 ### Core Note Operations
 | Tool | Description |
@@ -111,6 +108,7 @@ Add to `opencode.json`:
 | `append-note` | Append content to note (quick capture) |
 | `delete-note` | Delete note |
 | `rename-note` | Rename note and update all links |
+| `move-note` | Move note to new location with link updates |
 | `recent-notes` | List recently modified notes |
 
 ### Search & Discovery
@@ -119,9 +117,16 @@ Add to `opencode.json`:
 | `search-vault` | Content search |
 | `search-by-tags` | Tag-based search (AND) |
 | `discover-mocs` | Find MOC structure |
-| `backlinks` | Find notes linking to a given note |
 | `query-frontmatter` | Search by YAML properties (e.g., `status=draft`) |
 | `get-frontmatter` | Get frontmatter of a note |
+
+### Graph Analysis
+| Tool | Description |
+|------|-------------|
+| `backlinks` | Find notes linking TO a given note |
+| `forward-links` | Show outgoing links FROM a note |
+| `orphan-notes` | Find notes with no links to/from them |
+| `broken-links` | Find wikilinks pointing to non-existent notes |
 
 ### Tasks
 | Tool | Description |
@@ -129,11 +134,16 @@ Add to `opencode.json`:
 | `list-tasks` | Parse checkboxes with metadata |
 | `toggle-task` | Toggle task completion |
 
-### Daily Notes
+### Periodic Notes
 | Tool | Description |
 |------|-------------|
-| `daily-note` | Get or create today's daily note |
-| `list-daily-notes` | List all daily notes |
+| `daily-note` | Get or create daily note |
+| `list-daily-notes` | List daily notes |
+| `weekly-note` | Get or create weekly note |
+| `monthly-note` | Get or create monthly note |
+| `quarterly-note` | Get or create quarterly note |
+| `yearly-note` | Get or create yearly note |
+| `list-periodic-notes` | List periodic notes by type |
 
 ### Templates
 | Tool | Description |
@@ -141,6 +151,22 @@ Add to `opencode.json`:
 | `list-templates` | List available templates |
 | `get-template` | Show template content and variables |
 | `apply-template` | Create note from template with variable substitution |
+
+### Folders
+| Tool | Description |
+|------|-------------|
+| `list-folders` | List all folders in the vault |
+| `create-folder` | Create a new folder |
+| `delete-folder` | Delete a folder |
+
+### Canvas
+| Tool | Description |
+|------|-------------|
+| `list-canvases` | List all canvas files |
+| `read-canvas` | Read and parse a canvas file |
+| `create-canvas` | Create a new empty canvas |
+| `add-canvas-node` | Add a node (text, file, link, group) |
+| `add-canvas-edge` | Add an edge between nodes |
 
 ### Analytics
 | Tool | Description |

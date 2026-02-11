@@ -328,4 +328,280 @@ func registerTools(s *server.MCPServer, v *vault.Vault) {
 		),
 		v.VaultStatsHandler,
 	)
+
+	// weekly-note
+	s.AddTool(
+		mcp.NewTool("weekly-note",
+			mcp.WithDescription("Get or create a weekly note"),
+			mcp.WithString("date",
+				mcp.Description("Date within the week (default: this week). Any date in the week works."),
+			),
+			mcp.WithString("folder",
+				mcp.Description("Folder for weekly notes (default: 'weekly')"),
+			),
+			mcp.WithString("format",
+				mcp.Description("Filename format (default: '2006-W02' for YYYY-Www)"),
+			),
+			mcp.WithBoolean("create",
+				mcp.Description("Create if missing (default: true)"),
+			),
+		),
+		v.WeeklyNoteHandler,
+	)
+
+	// monthly-note
+	s.AddTool(
+		mcp.NewTool("monthly-note",
+			mcp.WithDescription("Get or create a monthly note"),
+			mcp.WithString("date",
+				mcp.Description("Date within the month (default: this month)"),
+			),
+			mcp.WithString("folder",
+				mcp.Description("Folder for monthly notes (default: 'monthly')"),
+			),
+			mcp.WithString("format",
+				mcp.Description("Filename format (default: '2006-01' for YYYY-MM)"),
+			),
+			mcp.WithBoolean("create",
+				mcp.Description("Create if missing (default: true)"),
+			),
+		),
+		v.MonthlyNoteHandler,
+	)
+
+	// quarterly-note
+	s.AddTool(
+		mcp.NewTool("quarterly-note",
+			mcp.WithDescription("Get or create a quarterly note"),
+			mcp.WithString("date",
+				mcp.Description("Date within the quarter (default: this quarter)"),
+			),
+			mcp.WithString("folder",
+				mcp.Description("Folder for quarterly notes (default: 'quarterly')"),
+			),
+			mcp.WithBoolean("create",
+				mcp.Description("Create if missing (default: true)"),
+			),
+		),
+		v.QuarterlyNoteHandler,
+	)
+
+	// yearly-note
+	s.AddTool(
+		mcp.NewTool("yearly-note",
+			mcp.WithDescription("Get or create a yearly note"),
+			mcp.WithString("date",
+				mcp.Description("Date within the year (default: this year)"),
+			),
+			mcp.WithString("folder",
+				mcp.Description("Folder for yearly notes (default: 'yearly')"),
+			),
+			mcp.WithBoolean("create",
+				mcp.Description("Create if missing (default: true)"),
+			),
+		),
+		v.YearlyNoteHandler,
+	)
+
+	// list-periodic-notes
+	s.AddTool(
+		mcp.NewTool("list-periodic-notes",
+			mcp.WithDescription("List periodic notes by type"),
+			mcp.WithString("type",
+				mcp.Description("Type: daily, weekly, monthly, quarterly, yearly (default: weekly)"),
+			),
+			mcp.WithString("folder",
+				mcp.Description("Override folder location"),
+			),
+			mcp.WithNumber("limit",
+				mcp.Description("Maximum notes to return (default: 20)"),
+			),
+		),
+		v.ListPeriodicNotesHandler,
+	)
+
+	// forward-links
+	s.AddTool(
+		mcp.NewTool("forward-links",
+			mcp.WithDescription("Show outgoing links from a note"),
+			mcp.WithString("path",
+				mcp.Required(),
+				mcp.Description("Path to the note"),
+			),
+		),
+		v.ForwardLinksHandler,
+	)
+
+	// orphan-notes
+	s.AddTool(
+		mcp.NewTool("orphan-notes",
+			mcp.WithDescription("Find notes with no links to/from them"),
+			mcp.WithString("directory",
+				mcp.Description("Limit search to specific directory"),
+			),
+			mcp.WithBoolean("include_no_outgoing",
+				mcp.Description("Also show notes with incoming links but no outgoing (dead ends)"),
+			),
+		),
+		v.OrphanNotesHandler,
+	)
+
+	// broken-links
+	s.AddTool(
+		mcp.NewTool("broken-links",
+			mcp.WithDescription("Find wikilinks pointing to non-existent notes"),
+			mcp.WithString("directory",
+				mcp.Description("Limit search to specific directory"),
+			),
+		),
+		v.BrokenLinksHandler,
+	)
+
+	// list-folders
+	s.AddTool(
+		mcp.NewTool("list-folders",
+			mcp.WithDescription("List all folders in the vault"),
+			mcp.WithString("directory",
+				mcp.Description("Start from a specific directory"),
+			),
+			mcp.WithBoolean("include_empty",
+				mcp.Description("Include empty folders (default: true)"),
+			),
+		),
+		v.ListFoldersHandler,
+	)
+
+	// create-folder
+	s.AddTool(
+		mcp.NewTool("create-folder",
+			mcp.WithDescription("Create a new folder"),
+			mcp.WithString("path",
+				mcp.Required(),
+				mcp.Description("Folder path to create"),
+			),
+		),
+		v.CreateFolderHandler,
+	)
+
+	// move-note
+	s.AddTool(
+		mcp.NewTool("move-note",
+			mcp.WithDescription("Move a note to a new location"),
+			mcp.WithString("source",
+				mcp.Required(),
+				mcp.Description("Current path of the note"),
+			),
+			mcp.WithString("destination",
+				mcp.Required(),
+				mcp.Description("New path for the note"),
+			),
+			mcp.WithBoolean("update_links",
+				mcp.Description("Update wikilinks in other notes (default: true)"),
+			),
+		),
+		v.MoveNoteHandler,
+	)
+
+	// delete-folder
+	s.AddTool(
+		mcp.NewTool("delete-folder",
+			mcp.WithDescription("Delete a folder"),
+			mcp.WithString("path",
+				mcp.Required(),
+				mcp.Description("Folder path to delete"),
+			),
+			mcp.WithBoolean("force",
+				mcp.Description("Delete even if not empty (default: false)"),
+			),
+		),
+		v.DeleteFolderHandler,
+	)
+
+	// list-canvases
+	s.AddTool(
+		mcp.NewTool("list-canvases",
+			mcp.WithDescription("List all canvas files in the vault"),
+			mcp.WithString("directory",
+				mcp.Description("Limit to specific directory"),
+			),
+		),
+		v.ListCanvasesHandler,
+	)
+
+	// read-canvas
+	s.AddTool(
+		mcp.NewTool("read-canvas",
+			mcp.WithDescription("Read and parse a canvas file"),
+			mcp.WithString("path",
+				mcp.Required(),
+				mcp.Description("Path to the canvas file"),
+			),
+		),
+		v.ReadCanvasHandler,
+	)
+
+	// create-canvas
+	s.AddTool(
+		mcp.NewTool("create-canvas",
+			mcp.WithDescription("Create a new empty canvas"),
+			mcp.WithString("path",
+				mcp.Required(),
+				mcp.Description("Path for the new canvas"),
+			),
+		),
+		v.CreateCanvasHandler,
+	)
+
+	// add-canvas-node
+	s.AddTool(
+		mcp.NewTool("add-canvas-node",
+			mcp.WithDescription("Add a node to a canvas"),
+			mcp.WithString("canvas",
+				mcp.Required(),
+				mcp.Description("Path to the canvas file"),
+			),
+			mcp.WithString("type",
+				mcp.Description("Node type: text, file, link, group (default: text)"),
+			),
+			mcp.WithString("content",
+				mcp.Description("Node content (text for text nodes, path for file nodes, URL for link nodes)"),
+			),
+			mcp.WithNumber("x",
+				mcp.Description("X position (default: 0)"),
+			),
+			mcp.WithNumber("y",
+				mcp.Description("Y position (default: 0)"),
+			),
+			mcp.WithNumber("width",
+				mcp.Description("Node width (default: 300)"),
+			),
+			mcp.WithNumber("height",
+				mcp.Description("Node height (default: 200)"),
+			),
+		),
+		v.AddCanvasNodeHandler,
+	)
+
+	// add-canvas-edge
+	s.AddTool(
+		mcp.NewTool("add-canvas-edge",
+			mcp.WithDescription("Add an edge between nodes in a canvas"),
+			mcp.WithString("canvas",
+				mcp.Required(),
+				mcp.Description("Path to the canvas file"),
+			),
+			mcp.WithString("from",
+				mcp.Required(),
+				mcp.Description("Source node ID"),
+			),
+			mcp.WithString("to",
+				mcp.Required(),
+				mcp.Description("Target node ID"),
+			),
+			mcp.WithString("label",
+				mcp.Description("Optional edge label"),
+			),
+		),
+		v.AddCanvasEdgeHandler,
+	)
 }
