@@ -862,4 +862,72 @@ func registerTools(s *server.MCPServer, v *vault.Vault) {
 		),
 		v.SuggestLinksHandler,
 	)
+
+	// search-advanced
+	s.AddTool(
+		mcp.NewTool("search-advanced",
+			mcp.WithDescription("Advanced search with multiple terms and logical operators"),
+			mcp.WithString("query",
+				mcp.Required(),
+				mcp.Description("Search query (supports 'quoted phrases' and multiple terms)"),
+			),
+			mcp.WithString("in",
+				mcp.Description("Where to search: content, frontmatter, tags, all (default: content)"),
+			),
+			mcp.WithString("operator",
+				mcp.Description("Logical operator: and, or (default: and)"),
+			),
+			mcp.WithString("directory",
+				mcp.Description("Limit search to specific directory"),
+			),
+			mcp.WithNumber("limit",
+				mcp.Description("Maximum results to return (default: 50)"),
+			),
+		),
+		v.SearchAdvancedHandler,
+	)
+
+	// search-by-date
+	s.AddTool(
+		mcp.NewTool("search-by-date",
+			mcp.WithDescription("Find notes by modification date range"),
+			mcp.WithString("from",
+				mcp.Description("Start date (formats: YYYY-MM-DD, MM-DD-YYYY, Jan 2, 2006)"),
+			),
+			mcp.WithString("to",
+				mcp.Description("End date (formats: YYYY-MM-DD, MM-DD-YYYY, Jan 2, 2006)"),
+			),
+			mcp.WithString("type",
+				mcp.Description("Date type: modified, created (default: modified)"),
+			),
+			mcp.WithString("directory",
+				mcp.Description("Limit search to specific directory"),
+			),
+			mcp.WithNumber("limit",
+				mcp.Description("Maximum results to return (default: 50)"),
+			),
+		),
+		v.SearchByDateHandler,
+	)
+
+	// search-regex
+	s.AddTool(
+		mcp.NewTool("search-regex",
+			mcp.WithDescription("Search using regular expression patterns"),
+			mcp.WithString("pattern",
+				mcp.Required(),
+				mcp.Description("Regular expression pattern"),
+			),
+			mcp.WithBoolean("case_insensitive",
+				mcp.Description("Case insensitive matching (default: true)"),
+			),
+			mcp.WithString("directory",
+				mcp.Description("Limit search to specific directory"),
+			),
+			mcp.WithNumber("limit",
+				mcp.Description("Maximum results to return (default: 50)"),
+			),
+		),
+		v.SearchRegexHandler,
+	)
 }
