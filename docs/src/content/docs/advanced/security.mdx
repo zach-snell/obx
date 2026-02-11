@@ -1,0 +1,187 @@
+---
+title: Security
+description: Security considerations for obsidian-go-mcp.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+This page covers security considerations when using obsidian-go-mcp.
+
+## Access Model
+
+### File System Access
+
+obsidian-go-mcp has **read and write access** to your vault directory and all subdirectories. It cannot access files outside the vault path you specify.
+
+```bash
+# Server only accesses /path/to/vault and below
+obsidian-go-mcp /path/to/vault
+```
+
+### No Network Access
+
+The MCP server itself makes no network connections. All operations are local file system operations.
+
+### No Obsidian Access
+
+obsidian-go-mcp works directly with files. It does not:
+- Connect to Obsidian
+- Access Obsidian's internal databases
+- Require Obsidian to be running
+- Interact with Obsidian plugins
+
+## AI Assistant Considerations
+
+<Aside type="caution">
+Your AI assistant (Claude, etc.) can use obsidian-go-mcp tools to read and modify your vault. Consider what sensitive information might be in your notes.
+</Aside>
+
+### What the AI Can Access
+
+When you use obsidian-go-mcp with an AI assistant, the AI can:
+
+- **Read** any note in your vault
+- **Search** across all content
+- **View** frontmatter and metadata
+- **See** file names and folder structure
+
+### What the AI Can Modify
+
+With your permission (through prompts), the AI can:
+
+- Create new notes
+- Edit existing notes
+- Delete notes
+- Move and rename notes
+- Modify frontmatter
+- Add/remove tags
+
+### Data Sent to AI Provider
+
+When you ask about your vault:
+1. Your question goes to the AI provider
+2. The AI decides which tools to use
+3. Tool results (note content) are sent to the AI
+4. The AI formulates a response
+
+**Note content flows through your AI provider's servers** according to their data handling policies.
+
+## Best Practices
+
+### Sensitive Information
+
+Consider excluding sensitive notes:
+
+1. **Separate vault**: Keep sensitive notes in a different vault not connected to MCP
+2. **Encryption**: Use Obsidian's encryption plugins for sensitive notes
+3. **Selective queries**: Be mindful of what you ask the AI to search
+
+### Vault Backup
+
+Always maintain backups:
+
+```bash
+# Simple backup before major operations
+cp -r /path/to/vault /path/to/vault-backup-$(date +%Y%m%d)
+```
+
+Or use:
+- Git for version control
+- Obsidian Sync
+- Cloud backup services
+
+### Review AI Actions
+
+For destructive operations:
+
+> "Show me what notes would be deleted before actually deleting them"
+
+> "List the notes that would be moved, then confirm before moving"
+
+### Limit Scope
+
+Use directory parameters to limit operations:
+
+```
+# Instead of searching entire vault
+search-vault: query="password" directory="work"
+```
+
+## MCP Protocol Security
+
+### Local Communication
+
+The MCP protocol uses **stdio** (standard input/output) for communication. There are no:
+- Open network ports
+- HTTP endpoints
+- Remote connections
+
+### Process Isolation
+
+obsidian-go-mcp runs as a separate process:
+- Spawned by your MCP client
+- Communicates via stdin/stdout
+- Terminates when client disconnects
+
+### No Persistent State
+
+The server:
+- Does not store data between sessions
+- Does not cache vault content
+- Does not phone home
+
+## Deployment Considerations
+
+### Permissions
+
+Run with minimal required permissions:
+
+```bash
+# The user running obsidian-go-mcp needs:
+# - Read access to vault (for all operations)
+# - Write access to vault (for modifications)
+```
+
+### Shared Systems
+
+On shared systems:
+- Ensure vault directory permissions are restrictive
+- Consider separate user accounts for vault access
+- Review who has access to MCP client configuration
+
+### Enterprise Use
+
+For enterprise deployments:
+- Review your AI provider's enterprise data handling
+- Consider self-hosted AI options
+- Implement vault access policies
+- Audit tool usage through MCP client logs
+
+## Incident Response
+
+### Unintended Modifications
+
+If the AI makes unwanted changes:
+
+1. **Stop immediately**: Don't continue the conversation
+2. **Check git/backup**: Restore from version control or backup
+3. **Review changes**: Use `git diff` or file system tools
+4. **Understand what happened**: Review the conversation
+
+### Data Exposure Concerns
+
+If concerned about data exposure:
+
+1. **Review conversation history**: What note content was shared?
+2. **Check AI provider policies**: Understand data retention
+3. **Assess sensitivity**: What was the potential impact?
+4. **Take remediation steps**: Rotate credentials, update sensitive info
+
+## Security Checklist
+
+- [ ] Vault backups are configured and tested
+- [ ] Sensitive notes are in a separate vault or encrypted
+- [ ] AI provider's data policy is understood
+- [ ] Directory permissions are appropriate
+- [ ] Not running as root/admin unnecessarily
+- [ ] Destructive operations are previewed before execution

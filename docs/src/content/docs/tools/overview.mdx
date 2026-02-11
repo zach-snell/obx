@@ -1,0 +1,112 @@
+---
+title: Tools Overview
+description: Overview of all 67 tools available in obsidian-go-mcp.
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+obsidian-go-mcp provides **67 tools** organized into logical categories. Each tool is designed to perform a specific vault operation and can be combined for complex workflows.
+
+## Tool Categories
+
+<CardGrid>
+  <LinkCard
+    title="Core Operations"
+    description="Basic CRUD operations for notes and folders"
+    href="/obsidian-go-mcp/tools/core"
+  />
+  <LinkCard
+    title="Search"
+    description="Find content with text, tags, regex, and advanced queries"
+    href="/obsidian-go-mcp/tools/search"
+  />
+  <LinkCard
+    title="Frontmatter & Fields"
+    description="Manage YAML frontmatter and Dataview inline fields"
+    href="/obsidian-go-mcp/tools/frontmatter"
+  />
+  <LinkCard
+    title="Graph & Links"
+    description="Analyze backlinks, forward links, and vault connectivity"
+    href="/obsidian-go-mcp/tools/graph"
+  />
+  <LinkCard
+    title="Periodic Notes"
+    description="Daily, weekly, monthly, quarterly, and yearly notes"
+    href="/obsidian-go-mcp/tools/periodic"
+  />
+  <LinkCard
+    title="Templates"
+    description="Create notes from templates with variable substitution"
+    href="/obsidian-go-mcp/tools/templates"
+  />
+  <LinkCard
+    title="Organization"
+    description="MOCs, indexes, note refactoring, and maintenance"
+    href="/obsidian-go-mcp/tools/organization"
+  />
+  <LinkCard
+    title="Bulk Operations"
+    description="Batch operations on multiple notes"
+    href="/obsidian-go-mcp/tools/bulk"
+  />
+  <LinkCard
+    title="Canvas"
+    description="Work with Obsidian canvas files"
+    href="/obsidian-go-mcp/tools/canvas"
+  />
+</CardGrid>
+
+## Quick Reference
+
+| Category | Tools | Description |
+|----------|-------|-------------|
+| Core | 14 | Notes, folders, reading, writing |
+| Search | 7 | Text, tags, regex, date, advanced |
+| Frontmatter | 10 | YAML properties, inline fields |
+| Graph | 6 | Links, backlinks, orphans, suggestions |
+| Periodic | 6 | Daily through yearly notes |
+| Templates | 3 | List, get, apply templates |
+| Organization | 9 | MOCs, indexes, refactoring |
+| Bulk | 3 | Tag, move, set frontmatter |
+| Canvas | 5 | Create, read, edit canvases |
+| Tasks | 2 | List and toggle tasks |
+| Stats | 2 | Vault statistics |
+
+## How Tools Work
+
+Each tool:
+
+1. **Receives parameters** - JSON input from the MCP client
+2. **Validates input** - Checks required fields and formats
+3. **Performs operation** - Reads/writes vault files directly
+4. **Returns results** - JSON response with data or confirmation
+
+### Example Tool Call
+
+When you ask "show me notes tagged with #project", the AI:
+
+1. Selects the `search-by-tags` tool
+2. Sends `{"tags": "project"}`
+3. Receives matching notes with paths and context
+4. Formats the response for you
+
+## Tool Naming Convention
+
+Tools use kebab-case names that describe their action:
+
+- `read-note` / `write-note` - Single note operations
+- `read-notes` - Batch read (plural)
+- `list-*` - Enumerate items
+- `search-*` - Find by criteria
+- `get-*` - Retrieve specific data
+- `set-*` / `add-*` - Modify data
+- `bulk-*` - Batch modifications
+
+## Next Steps
+
+Explore each category to learn about specific tools:
+
+- Start with [Core Operations](/obsidian-go-mcp/tools/core) for basic note management
+- Learn [Search](/obsidian-go-mcp/tools/search) to find content quickly
+- See [Usage Examples](/obsidian-go-mcp/guides/examples) for real workflows

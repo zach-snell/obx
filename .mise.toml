@@ -46,3 +46,23 @@ depends = ["lint", "test", "vuln"]
 [tasks.fmt]
 description = "Format code"
 run = "gofmt -w ."
+
+[tasks."docs:dev"]
+description = "Run docs dev server"
+dir = "docs"
+run = "pnpm dev"
+
+[tasks."docs:build"]
+description = "Build docs for production"
+dir = "docs"
+run = "pnpm build"
+
+[tasks."docs:preview"]
+description = "Preview production docs build"
+dir = "docs"
+run = "pnpm preview"
+
+[tasks."docs:install"]
+description = "Install docs dependencies"
+dir = "docs"
+run = "pnpm install"

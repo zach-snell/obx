@@ -1,0 +1,287 @@
+---
+title: Usage Examples
+description: Real-world examples and workflows for obsidian-go-mcp.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+This guide shows practical examples of using obsidian-go-mcp with AI assistants.
+
+## Daily Workflows
+
+### Morning Routine
+
+**You**: "Set up my day - create today's daily note, show my open tasks, and list what I worked on yesterday"
+
+The AI will:
+1. Create/open today's daily note
+2. Run `list-tasks` with `status=open`
+3. Read yesterday's daily note for context
+
+---
+
+### End of Day Review
+
+**You**: "Help me wrap up - show tasks I completed today, move any unfinished ones to tomorrow, and summarize what I accomplished"
+
+The AI will:
+1. List today's completed tasks
+2. Identify incomplete tasks
+3. Append them to tomorrow's daily note
+4. Generate a summary for today's note
+
+---
+
+### Weekly Review
+
+**You**: "Start my weekly review - show all tasks completed this week, any open items, and notes I created"
+
+The AI will:
+1. Open/create the weekly note
+2. List daily notes from the past 7 days
+3. Aggregate completed tasks
+4. Find notes created this week
+5. Summarize in the weekly note
+
+## Note Management
+
+### Quick Capture
+
+**You**: "Add to my inbox: Research GraphQL vs REST for the new API"
+
+```
+→ append-note: inbox.md
+→ Content: "- [ ] Research GraphQL vs REST for the new API"
+```
+
+---
+
+### Create Structured Notes
+
+**You**: "Create a new project note for 'Mobile App Redesign' with high priority, status planning, and due date March 15"
+
+The AI will:
+1. Create the note with `write-note`
+2. Set frontmatter properties:
+   - `priority: high`
+   - `status: planning`
+   - `due: 2024-03-15`
+
+---
+
+### Find and Update
+
+**You**: "Find my note about the Q4 budget and update the status to approved"
+
+```
+1. search-vault: "Q4 budget"
+2. set-frontmatter: path=found/note.md, key=status, value=approved
+```
+
+## Research Workflows
+
+### Explore a Topic
+
+**You**: "What do I know about machine learning? Show related notes and any gaps"
+
+The AI will:
+1. `search-vault`: "machine learning"
+2. `search-by-tags`: "machine-learning"
+3. `backlinks`: on main ML note
+4. `orphan-notes`: check for isolated ML content
+5. `suggest-links`: find potential connections
+
+---
+
+### Build a Knowledge Map
+
+**You**: "Create a MOC for my programming notes and connect it to my main index"
+
+```
+1. generate-moc: directory=programming, output=programming/Programming MOC.md
+2. append-note: Add link to main index
+3. bulk-tag: Add #moc tag to the MOC
+```
+
+---
+
+### Find Gaps
+
+**You**: "What concepts in my vault need more development?"
+
+```
+1. find-stubs: max_words=50
+2. broken-links: Find mentioned-but-not-created notes
+3. orphan-notes: Find disconnected content
+```
+
+## Task Management
+
+### Review All Tasks
+
+**You**: "Show me all open tasks grouped by priority"
+
+The AI will use `list-tasks` and organize results by priority tags or frontmatter.
+
+---
+
+### Task Cleanup
+
+**You**: "Find all tasks older than 30 days and mark them for review"
+
+```
+1. list-tasks: status=open
+2. Filter by date in task text or note modified date
+3. bulk-tag: Add #needs-review to affected notes
+```
+
+---
+
+### Project Tasks
+
+**You**: "Show all tasks in my 'Website Redesign' project"
+
+```
+1. search-vault: In projects/Website Redesign/
+2. list-tasks: directory=projects/Website Redesign
+```
+
+## Content Organization
+
+### Reorganize a Folder
+
+**You**: "The 'misc' folder is getting cluttered. Help me organize it by topic"
+
+The AI might:
+1. List notes in misc/
+2. Analyze content and tags
+3. Suggest categorization
+4. Create new folders
+5. `bulk-move` notes to appropriate locations
+
+---
+
+### Clean Up Tags
+
+**You**: "I have tags #todo, #TODO, and #to-do. Standardize them all to #todo"
+
+```
+1. search-by-tags: each variant
+2. For each note: Update tag format
+3. Report: "Standardized 23 notes to use #todo"
+```
+
+---
+
+### Archive Old Content
+
+**You**: "Archive all notes in projects/ that haven't been modified in 6 months"
+
+```
+1. find-outdated: days=180, directory=projects
+2. bulk-move: destination=archive/projects
+3. bulk-set-frontmatter: status=archived
+4. bulk-tag: add #archived
+```
+
+## Meeting Notes
+
+### Before a Meeting
+
+**You**: "Prepare for my meeting with the design team - create a note from the meeting template and pull in context from recent design discussions"
+
+```
+1. apply-template: meeting → meetings/Design Team 2024-01-15.md
+2. search-vault: "design" in recent notes
+3. append-note: Add relevant context to meeting note
+```
+
+---
+
+### After a Meeting
+
+**You**: "Extract action items from today's meeting notes and create tasks"
+
+The AI will:
+1. Read the meeting note
+2. Identify action items (lines starting with "- [ ]" or "Action:")
+3. Optionally distribute to relevant project notes
+
+## Advanced Workflows
+
+### Content Pipeline
+
+**You**: "Show me all draft articles ready for review"
+
+```
+query-frontmatter: status=draft
+→ Filter by: word count > 500, has all required sections
+→ Present list for review
+```
+
+---
+
+### Cross-Reference Check
+
+**You**: "Are there any notes that mention 'API' but don't link to my API documentation?"
+
+```
+1. search-vault: "API"
+2. For each result: check if it links to API-docs.md
+3. Report unlinked mentions
+4. Optionally: Add links
+```
+
+---
+
+### Vault Health Check
+
+**You**: "Run a full health check on my vault"
+
+The AI will:
+1. `vault-stats`: Overall metrics
+2. `orphan-notes`: Disconnected content
+3. `broken-links`: Missing link targets
+4. `find-stubs`: Underdeveloped notes
+5. `find-outdated`: Stale content
+6. Report findings and suggest improvements
+
+<Aside type="tip">
+Save complex workflows as prompts in a "Workflows" note so you can easily repeat them.
+</Aside>
+
+## Conversation Patterns
+
+### Iterative Refinement
+
+Start broad, then narrow:
+
+```
+You: "What notes do I have about Python?"
+AI: Shows 45 notes
+
+You: "Just the ones about async programming"
+AI: Filters to 8 notes
+
+You: "Which of these are tutorials?"
+AI: Identifies 3 tutorials
+
+You: "Add #python-async tag to all of them"
+AI: Tags 3 notes
+```
+
+### Chained Operations
+
+Describe the full workflow:
+
+> "Find all notes tagged #book, check which ones don't have a rating in frontmatter, and add rating=unrated to those"
+
+The AI handles the multi-step process automatically.
+
+### Exploratory Questions
+
+Ask open-ended questions:
+
+> "What are the most connected notes in my vault?"
+> "Which topics do I write about most?"
+> "What notes should probably be linked together?"

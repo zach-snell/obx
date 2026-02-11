@@ -1,0 +1,118 @@
+---
+title: Configuration
+description: Configure obsidian-go-mcp with your MCP client.
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+## MCP Client Configuration
+
+<Tabs>
+  <TabItem label="Claude Desktop">
+    Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+    ```json
+    {
+      "mcpServers": {
+        "obsidian": {
+          "command": "/usr/local/bin/obsidian-mcp",
+          "args": ["/path/to/your/vault"]
+        }
+      }
+    }
+    ```
+
+    Restart Claude Desktop after saving.
+  </TabItem>
+  <TabItem label="Claude Code">
+    The server may be auto-discovered. If not, add to your MCP configuration:
+
+    ```json
+    {
+      "mcpServers": {
+        "obsidian": {
+          "command": "/usr/local/bin/obsidian-mcp",
+          "args": ["/path/to/your/vault"]
+        }
+      }
+    }
+    ```
+  </TabItem>
+  <TabItem label="Other Clients">
+    The server communicates via stdio. Run it directly:
+
+    ```bash
+    obsidian-mcp /path/to/your/vault
+    ```
+
+    Configure your MCP client to spawn this process.
+  </TabItem>
+</Tabs>
+
+## Finding Your Vault Path
+
+<Tabs>
+  <TabItem label="macOS">
+    Vaults are typically in:
+    - `~/Documents/Obsidian/` (default location)
+    - `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/` (iCloud)
+    
+    Or open Obsidian → Settings → Files & Links → Vault path
+  </TabItem>
+  <TabItem label="Linux">
+    Check your home directory:
+    - `~/Documents/Obsidian/`
+    - `~/Obsidian/`
+    
+    Or wherever you created your vault.
+  </TabItem>
+  <TabItem label="Windows">
+    Common locations:
+    - `C:\Users\YourName\Documents\Obsidian\`
+    - `C:\Users\YourName\OneDrive\Obsidian\`
+  </TabItem>
+</Tabs>
+
+## Multiple Vaults
+
+Run multiple server instances, each pointing to a different vault:
+
+```json
+{
+  "mcpServers": {
+    "work-vault": {
+      "command": "/usr/local/bin/obsidian-mcp",
+      "args": ["/path/to/work/vault"]
+    },
+    "personal-vault": {
+      "command": "/usr/local/bin/obsidian-mcp",
+      "args": ["/path/to/personal/vault"]
+    }
+  }
+}
+```
+
+<Aside type="tip">
+  Give each server a descriptive name so you know which vault you're working with.
+</Aside>
+
+## Troubleshooting
+
+### "Command not found"
+
+The binary isn't in your PATH. Either:
+- Use the full path: `/usr/local/bin/obsidian-mcp`
+- Add the install directory to your PATH
+
+### "Permission denied"
+
+Make sure the binary is executable:
+```bash
+chmod +x /usr/local/bin/obsidian-mcp
+```
+
+### Server not connecting
+
+1. Check the vault path exists
+2. Ensure the config JSON is valid
+3. Restart your MCP client

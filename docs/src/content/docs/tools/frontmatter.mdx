@@ -1,0 +1,212 @@
+---
+title: Frontmatter & Fields
+description: Manage YAML frontmatter and Dataview-style inline fields.
+---
+
+These tools manage structured metadata in your notes, including YAML frontmatter and Dataview-compatible inline fields.
+
+## YAML Frontmatter
+
+Frontmatter is YAML metadata at the top of a note:
+
+```yaml
+---
+title: My Note
+status: draft
+tags:
+  - project
+  - urgent
+created: 2024-01-15
+---
+```
+
+### get-frontmatter
+
+Get frontmatter properties of a note.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to the note |
+
+Returns all frontmatter as a JSON object.
+
+**Example prompts:**
+- "What's the status of my project note?"
+- "Show me the frontmatter of this article"
+
+---
+
+### set-frontmatter
+
+Set or update a frontmatter property.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to the note |
+| `key` | string | Yes | Property key |
+| `value` | string | Yes | Property value |
+
+Creates frontmatter block if it doesn't exist.
+
+**Example prompts:**
+- "Set the status to 'published' on this note"
+- "Add a priority field with value 'high'"
+- "Update the author to 'John Doe'"
+
+---
+
+### remove-frontmatter-key
+
+Remove a property from frontmatter.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to the note |
+| `key` | string | Yes | Property key to remove |
+
+**Example prompts:**
+- "Remove the draft status from this note"
+- "Delete the deprecated 'category' field"
+
+---
+
+### query-frontmatter
+
+Search notes by frontmatter properties.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | Yes | Query: `key=value` or `key:value` |
+| `directory` | string | No | Limit to specific directory |
+
+**Example prompts:**
+- "Find all notes with status=draft"
+- "Show notes where type:project"
+- "Find articles with author=Jane"
+
+---
+
+### add-alias
+
+Add an alias to a note's frontmatter.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to the note |
+| `alias` | string | Yes | Alias to add |
+
+Aliases allow notes to be found by alternative names.
+
+**Example prompts:**
+- "Add alias 'JS' to the JavaScript.md note"
+- "Create an alias 'ML' for Machine Learning"
+
+---
+
+### add-tag-to-frontmatter
+
+Add a tag to the frontmatter tags array.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to the note |
+| `tag` | string | Yes | Tag to add (with or without #) |
+
+**Example prompts:**
+- "Add the #important tag to this note's frontmatter"
+- "Tag this note with 'review-needed'"
+
+## Inline Fields (Dataview)
+
+Inline fields are Dataview-style metadata within note content:
+
+```markdown
+Some text here.
+
+Status:: In Progress
+Due:: 2024-03-15
+Priority:: High
+
+More content...
+```
+
+### get-inline-fields
+
+Extract all inline fields from a note.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to the note |
+
+Returns all `key:: value` pairs found in the note.
+
+**Example prompts:**
+- "What inline fields does this note have?"
+- "Show me the Dataview fields in my task"
+
+---
+
+### set-inline-field
+
+Set or update an inline field.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to the note |
+| `key` | string | Yes | Field key |
+| `value` | string | Yes | Field value |
+
+Updates existing field or appends new one.
+
+**Example prompts:**
+- "Set the Status to 'Complete'"
+- "Update the Due date to next Friday"
+
+---
+
+### query-inline-fields
+
+Search notes by inline field values.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `key` | string | Yes | Field key to search for |
+| `value` | string | No | Value to match (optional) |
+| `operator` | string | No | Match type: contains, equals, exists (default: contains) |
+| `directory` | string | No | Limit to specific directory |
+
+**Example prompts:**
+- "Find all notes with a Status field"
+- "Show notes where Priority equals High"
+- "Find tasks with Due date containing '2024-03'"
+
+## Best Practices
+
+### Frontmatter vs Inline Fields
+
+| Use Frontmatter For | Use Inline Fields For |
+|---------------------|----------------------|
+| Note-level metadata | In-context metadata |
+| Status, type, tags | Task due dates |
+| Author, created | Progress tracking |
+| Obsidian Properties | Dataview queries |
+
+### Consistent Key Names
+
+Use consistent naming:
+- `status` not `Status` or `STATUS`
+- `due-date` or `due_date` consistently
+- Document your schema in a note
+
+### Common Frontmatter Schema
+
+```yaml
+---
+title: Note Title
+type: article | project | meeting | task
+status: draft | in-progress | review | published
+tags: []
+created: YYYY-MM-DD
+modified: YYYY-MM-DD
+---
+```

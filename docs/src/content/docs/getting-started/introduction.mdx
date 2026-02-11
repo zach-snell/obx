@@ -1,0 +1,50 @@
+---
+title: Introduction
+description: A fast, lightweight MCP server for Obsidian vaults written in Go.
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+**obsidian-go-mcp** is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that gives AI assistants full access to your [Obsidian](https://obsidian.md/) vault.
+
+## Why obsidian-go-mcp?
+
+<CardGrid>
+  <Card title="No Plugins Required" icon="puzzle">
+    Works directly with your vault files. No need to install any Obsidian plugins or run Obsidian itself.
+  </Card>
+  <Card title="Single Binary" icon="rocket">
+    One file, zero dependencies. No Node.js, Python, or other runtimes needed.
+  </Card>
+  <Card title="67 Tools" icon="list-format">
+    Comprehensive vault operations including search, templates, periodic notes, canvas, and more.
+  </Card>
+  <Card title="Fast & Lightweight" icon="star">
+    ~10ms startup time. Low memory footprint. Built in Go for performance.
+  </Card>
+</CardGrid>
+
+## Comparison
+
+| Feature | obsidian-go-mcp | Other MCP Servers |
+|---------|-----------------|-------------------|
+| **Plugin required** | No | Often yes |
+| **Runtime** | Single binary | Node.js/Python |
+| **Platform support** | macOS, Linux, Windows | Often limited |
+| **Tool count** | 67 | 10-20 typically |
+| **Startup time** | ~10ms | Seconds |
+
+## Use Cases
+
+- **Daily journaling** - Create and manage daily notes with AI assistance
+- **Research** - Search across your vault, find connections, suggest links
+- **Task management** - Track todos with priorities, due dates, and tags
+- **Vault maintenance** - Find orphan notes, stubs, broken links
+- **Bulk operations** - Tag, move, or update many notes at once
+- **Knowledge graphs** - Analyze backlinks, forward links, and connections
+
+## Next Steps
+
+1. [Install obsidian-go-mcp](/obsidian-go-mcp/getting-started/installation)
+2. [Configure your MCP client](/obsidian-go-mcp/getting-started/configuration)
+3. [Try the Quick Start guide](/obsidian-go-mcp/getting-started/quickstart)

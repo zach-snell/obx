@@ -1,0 +1,21 @@
+/* Custom styles for obsidian-go-mcp docs */
+
+:root {
+  --sl-color-accent-low: #3b2e58;
+  --sl-color-accent: #7c3aed;
+  --sl-color-accent-high: #c4b5fd;
+}
+
+/* Code blocks */
+pre {
+  border-radius: 0.5rem;
+}
+
+/* Tables */
+table {
+  width: 100%;
+}
+
+th {
+  text-align: left;
+}

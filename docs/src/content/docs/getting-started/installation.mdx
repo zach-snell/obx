@@ -1,0 +1,98 @@
+---
+title: Installation
+description: How to install obsidian-go-mcp on your system.
+---
+
+import { Tabs, TabItem, Code } from '@astrojs/starlight/components';
+
+## Quick Install (Recommended)
+
+The easiest way to install is with our install script:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/zach-snell/obsidian-go-mcp/main/install.sh | bash
+```
+
+This automatically:
+- Detects your OS and architecture
+- Downloads the correct binary
+- Installs to `/usr/local/bin`
+
+### No sudo? Install to your home directory:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/zach-snell/obsidian-go-mcp/main/install.sh | bash -s -- --user
+```
+
+This installs to `~/.local/bin` instead.
+
+## Manual Download
+
+<Tabs>
+  <TabItem label="macOS (Apple Silicon)">
+    ```bash
+    curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-darwin-arm64 -o obsidian-mcp
+    chmod +x obsidian-mcp
+    sudo mv obsidian-mcp /usr/local/bin/
+    ```
+  </TabItem>
+  <TabItem label="macOS (Intel)">
+    ```bash
+    curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-darwin-amd64 -o obsidian-mcp
+    chmod +x obsidian-mcp
+    sudo mv obsidian-mcp /usr/local/bin/
+    ```
+  </TabItem>
+  <TabItem label="Linux (x64)">
+    ```bash
+    curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-linux-amd64 -o obsidian-mcp
+    chmod +x obsidian-mcp
+    sudo mv obsidian-mcp /usr/local/bin/
+    ```
+  </TabItem>
+  <TabItem label="Linux (ARM)">
+    ```bash
+    curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-linux-arm64 -o obsidian-mcp
+    chmod +x obsidian-mcp
+    sudo mv obsidian-mcp /usr/local/bin/
+    ```
+  </TabItem>
+  <TabItem label="Windows">
+    Download `obsidian-mcp-windows-amd64.exe` from the [releases page](https://github.com/zach-snell/obsidian-go-mcp/releases/latest).
+  </TabItem>
+</Tabs>
+
+## Go Install
+
+If you have Go installed:
+
+```bash
+go install github.com/zach-snell/obsidian-go-mcp/cmd/server@latest
+mv $(go env GOPATH)/bin/server $(go env GOPATH)/bin/obsidian-mcp
+```
+
+## Build from Source
+
+```bash
+git clone https://github.com/zach-snell/obsidian-go-mcp.git
+cd obsidian-go-mcp
+go build -o obsidian-mcp ./cmd/server
+```
+
+## Upgrading
+
+Just run the install script again:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/zach-snell/obsidian-go-mcp/main/install.sh | bash
+```
+
+It always fetches the latest version.
+
+## Verify Installation
+
+```bash
+obsidian-mcp --help
+```
+
+You should see usage information.

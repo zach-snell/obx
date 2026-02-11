@@ -1,0 +1,321 @@
+---
+title: Development
+description: Contributing to and developing obsidian-go-mcp.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+This guide covers setting up a development environment and contributing to obsidian-go-mcp.
+
+## Prerequisites
+
+- **Go 1.21+**: Required for building
+- **mise** (recommended): For tool management
+- **Git**: For version control
+
+## Getting Started
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/zach-snell/obsidian-go-mcp.git
+cd obsidian-go-mcp
+```
+
+### Install Dependencies
+
+<Tabs>
+  <TabItem label="With mise">
+    ```bash
+    mise install
+    ```
+    This installs Go and development tools automatically.
+  </TabItem>
+  <TabItem label="Manual">
+    ```bash
+    # Install Go 1.21+
+    # Then install dev tools:
+    go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+    go install golang.org/x/vuln/cmd/govulncheck@latest
+    ```
+  </TabItem>
+</Tabs>
+
+### Build
+
+```bash
+mise run build
+# or
+go build -o bin/obsidian-mcp ./cmd/server
+```
+
+### Run Tests
+
+```bash
+mise run test
+# or
+go test -race -cover ./...
+```
+
+## Project Structure
+
+```
+obsidian-go-mcp/
+├── cmd/
+│   └── server/
+│       └── main.go          # Entry point
+├── internal/
+│   ├── server/
+│   │   └── server.go        # MCP server setup, tool registration
+│   └── vault/
+│       ├── vault.go         # Vault struct, core helpers
+│       ├── notes.go         # Note CRUD operations
+│       ├── search.go        # Search tools
+│       ├── frontmatter.go   # Frontmatter operations
+│       ├── tasks.go         # Task management
+│       ├── periodic.go      # Periodic notes
+│       ├── templates.go     # Template operations
+│       ├── graph.go         # Link analysis
+│       ├── canvas.go        # Canvas operations
+│       ├── bulk.go          # Bulk operations
+│       └── *_test.go        # Tests
+├── docs/                    # Documentation site
+├── .mise.toml               # mise configuration
+└── README.md
+```
+
+## Development Tasks
+
+Available mise tasks:
+
+| Task | Description |
+|------|-------------|
+| `mise run build` | Build the binary |
+| `mise run dev` | Run with test vault |
+| `mise run test` | Run tests with race detection |
+| `mise run lint` | Run golangci-lint |
+| `mise run vuln` | Check for vulnerabilities |
+| `mise run check` | Run lint + test + vuln |
+| `mise run fuzz` | Run all fuzz tests |
+| `mise run docs:dev` | Run docs dev server |
+| `mise run docs:build` | Build docs for production |
+
+## Adding a New Tool
+
+### 1. Implement the Handler
+
+Create or update a file in `internal/vault/`:
+
+```go
+// internal/vault/myfeature.go
+
+package vault
+
+import (
+    "context"
+    "github.com/mark3labs/mcp-go/mcp"
+)
+
+func (v *Vault) MyNewToolHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+    // Get parameters
+    param := request.Params.Arguments["param"].(string)
+    
+    // Do the work
+    result, err := v.doSomething(param)
+    if err != nil {
+        return mcp.NewToolResultError(err.Error()), nil
+    }
+    
+    // Return result
+    return mcp.NewToolResultText(result), nil
+}
+```
+
+### 2. Register the Tool
+
+Add to `internal/server/server.go`:
+
+```go
+// my-new-tool
+s.AddTool(
+    mcp.NewTool("my-new-tool",
+        mcp.WithDescription("Description of what this tool does"),
+        mcp.WithString("param",
+            mcp.Required(),
+            mcp.Description("Parameter description"),
+        ),
+        mcp.WithNumber("optional_param",
+            mcp.Description("Optional parameter"),
+        ),
+    ),
+    v.MyNewToolHandler,
+)
+```
+
+### 3. Write Tests
+
+```go
+// internal/vault/myfeature_test.go
+
+package vault
+
+import (
+    "testing"
+)
+
+func TestMyNewTool(t *testing.T) {
+    v := setupTestVault(t)
+    
+    // Test normal case
+    result, err := v.doSomething("input")
+    if err != nil {
+        t.Fatalf("unexpected error: %v", err)
+    }
+    
+    if result != expected {
+        t.Errorf("got %v, want %v", result, expected)
+    }
+}
+```
+
+### 4. Update Documentation
+
+Add documentation in `docs/src/content/docs/tools/`.
+
+## Testing
+
+### Unit Tests
+
+```bash
+go test ./internal/vault/... -v
+```
+
+### With Coverage
+
+```bash
+go test -cover -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out
+```
+
+### Fuzz Testing
+
+```bash
+# Run all fuzz tests (10s each)
+mise run fuzz
+
+# Run specific fuzz test longer
+FUZZ_NAME=ParseTask FUZZ_TIME=60s mise run fuzz:one
+```
+
+### Integration Testing
+
+Test against a real vault:
+
+```bash
+# Create test vault
+mkdir -p test-vault/daily test-vault/templates
+echo "# Test" > test-vault/test.md
+
+# Run server
+mise run dev
+```
+
+## Code Style
+
+### Formatting
+
+```bash
+gofmt -w .
+```
+
+### Linting
+
+```bash
+mise run lint
+```
+
+Linting checks:
+- Code style
+- Error handling
+- Unused code
+- Security issues
+
+### Pre-commit Checks
+
+Run before committing:
+
+```bash
+mise run check
+```
+
+## Documentation
+
+### Local Development
+
+```bash
+cd docs
+pnpm install
+pnpm dev
+```
+
+### Building
+
+```bash
+mise run docs:build
+```
+
+### Adding Pages
+
+1. Create `.mdx` file in appropriate directory
+2. Update `astro.config.mjs` sidebar if needed
+3. Use Starlight components for rich content
+
+## Release Process
+
+### Version Bump
+
+1. Update version in `internal/server/server.go`
+2. Update CHANGELOG.md
+3. Commit: `git commit -m "Release vX.Y.Z"`
+4. Tag: `git tag vX.Y.Z`
+5. Push: `git push origin main --tags`
+
+### CI/CD
+
+GitHub Actions handles:
+- Running tests on PR
+- Building binaries on release
+- Publishing to GitHub Releases
+- Deploying documentation
+
+## Contributing
+
+### Pull Request Process
+
+1. Fork the repository
+2. Create a feature branch
+3. Make changes with tests
+4. Run `mise run check`
+5. Submit PR with clear description
+
+### Commit Messages
+
+Follow conventional commits:
+- `feat: Add new tool for X`
+- `fix: Handle edge case in search`
+- `docs: Update installation guide`
+- `test: Add fuzz tests for parser`
+
+### Code Review
+
+PRs are reviewed for:
+- Correctness
+- Test coverage
+- Documentation
+- Performance
+- Security
+
+## Getting Help
+
+- **Issues**: [GitHub Issues](https://github.com/zach-snell/obsidian-go-mcp/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/zach-snell/obsidian-go-mcp/discussions)

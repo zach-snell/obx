@@ -1,0 +1,404 @@
+---
+title: Template Variables
+description: Using variables in templates with obsidian-go-mcp.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Templates use double-brace syntax for variables: `{{variable_name}}`. This guide covers all available variables and how to create effective templates.
+
+## Built-in Variables
+
+These variables are automatically available in every template:
+
+| Variable | Description | Example Output |
+|----------|-------------|----------------|
+| `{{date}}` | Current date (YYYY-MM-DD) | `2024-03-15` |
+| `{{time}}` | Current time (HH:MM) | `14:30` |
+| `{{title}}` | Note title from path | `My Project` |
+| `{{filename}}` | Filename without extension | `My Project` |
+
+### Using Built-ins
+
+```markdown
+---
+title: {{title}}
+created: {{date}}
+---
+
+# {{title}}
+
+Created on {{date}} at {{time}}.
+```
+
+When applied to `projects/My Project.md`, produces:
+
+```markdown
+---
+title: My Project
+created: 2024-03-15
+---
+
+# My Project
+
+Created on 2024-03-15 at 14:30.
+```
+
+## Custom Variables
+
+Define your own variables and pass values when applying the template.
+
+### Defining Variables
+
+In your template, use any variable name:
+
+```markdown
+---
+title: {{title}}
+author: {{author}}
+category: {{category}}
+---
+
+# {{title}}
+
+**Author**: {{author}}
+**Category**: {{category}}
+```
+
+### Passing Values
+
+When applying, provide variables as `key=value` pairs:
+
+> "Create a note from the article template at posts/New Post.md with author='Jane Doe' and category='Technology'"
+
+Or the AI sends:
+```
+variables: "author=Jane Doe,category=Technology"
+```
+
+### Default Values
+
+Variables without values remain as-is, so you can fill them manually:
+
+```markdown
+Rating: {{rating}}
+```
+
+If no rating is provided, the output is `Rating: {{rating}}` for you to edit.
+
+<Aside type="tip">
+Document required variables in a comment at the top of your template:
+```markdown
+<!-- Variables: author (required), category (optional) -->
+```
+</Aside>
+
+## Template Examples
+
+### Meeting Notes
+
+`templates/meeting.md`:
+```markdown
+---
+title: "{{title}}"
+date: {{date}}
+type: meeting
+attendees: []
+status: draft
+---
+
+# {{title}}
+
+**Date**: {{date}} {{time}}
+**Attendees**: {{attendees}}
+
+## Agenda
+
+- 
+
+## Discussion
+
+## Action Items
+
+- [ ] 
+
+## Next Steps
+
+```
+
+**Usage**: "Create a meeting note for 'Q1 Planning' with attendees='Alice, Bob, Carol'"
+
+---
+
+### Project
+
+`templates/project.md`:
+```markdown
+---
+title: "{{title}}"
+status: {{status}}
+priority: {{priority}}
+owner: {{owner}}
+created: {{date}}
+deadline: {{deadline}}
+tags:
+  - project
+---
+
+# {{title}}
+
+## Overview
+
+{{description}}
+
+## Objectives
+
+1. 
+
+## Timeline
+
+- **Start**: {{date}}
+- **Deadline**: {{deadline}}
+
+## Tasks
+
+- [ ] Define scope
+- [ ] Create plan
+- [ ] 
+
+## Resources
+
+## Notes
+
+```
+
+**Usage**: "Create a project for 'Mobile App v2' with status='planning', priority='high', owner='John', deadline='2024-06-01'"
+
+---
+
+### Book Notes
+
+`templates/book.md`:
+```markdown
+---
+title: "{{title}}"
+author: "{{author}}"
+type: book
+status: {{status}}
+started: {{date}}
+finished: 
+rating: 
+isbn: {{isbn}}
+tags:
+  - book
+  - {{genre}}
+---
+
+# {{title}}
+
+**Author**: {{author}}
+**Genre**: {{genre}}
+**Started**: {{date}}
+
+## Summary
+
+## Key Ideas
+
+1. 
+
+## Favorite Quotes
+
+> 
+
+## Notes
+
+## Review
+
+**Rating**: /5
+
+**Would recommend to**: 
+
+**Key takeaway**: 
+```
+
+---
+
+### Person (CRM)
+
+`templates/person.md`:
+```markdown
+---
+title: "{{name}}"
+type: person
+company: "{{company}}"
+role: "{{role}}"
+email: {{email}}
+met: {{date}}
+tags:
+  - person
+  - {{context}}
+---
+
+# {{name}}
+
+**Company**: {{company}}
+**Role**: {{role}}
+**Email**: {{email}}
+**Met**: {{date}} - {{context}}
+
+## About
+
+## Interactions
+
+### {{date}}
+- Met at {{context}}
+
+## Notes
+
+## Follow-ups
+
+- [ ] 
+```
+
+---
+
+### Daily Note
+
+`templates/daily.md`:
+```markdown
+---
+title: "{{date}}"
+type: daily
+created: {{date}}
+---
+
+# {{date}}
+
+## Morning
+
+### Intentions
+- 
+
+### Tasks
+- [ ] 
+
+## Notes
+
+## Evening
+
+### Accomplishments
+- 
+
+### Gratitude
+- 
+
+### Tomorrow
+- 
+```
+
+## Advanced Patterns
+
+### Conditional Sections
+
+Since variables without values aren't replaced, you can create optional sections:
+
+```markdown
+{{#if client}}
+## Client Information
+**Client**: {{client}}
+{{/if}}
+```
+
+<Aside type="note">
+obsidian-go-mcp does simple find-replace. For conditional logic, leave sections with unfilled variables and edit manually, or ask the AI to clean up after applying.
+</Aside>
+
+### Nested Templates
+
+Create base templates and extend them:
+
+**base-note.md**:
+```markdown
+---
+created: {{date}}
+modified: {{date}}
+---
+```
+
+Then include common elements in other templates.
+
+### Template for Templates
+
+A meta-template for creating new templates:
+
+```markdown
+---
+title: "{{template_name}} Template"
+description: "Template for {{purpose}}"
+variables:
+  - name: (required)
+  - description: (optional)
+---
+
+<!-- 
+Variables:
+- {{variable1}}: Description
+- {{variable2}}: Description
+-->
+
+# {{title}}
+
+## Section 1
+
+## Section 2
+```
+
+## Template Organization
+
+### Folder Structure
+
+```
+templates/
+├── daily.md
+├── weekly.md
+├── meeting.md
+├── project.md
+├── work/
+│   ├── standup.md
+│   ├── retrospective.md
+│   └── 1on1.md
+├── personal/
+│   ├── book.md
+│   ├── movie.md
+│   └── recipe.md
+└── reference/
+    ├── person.md
+    └── company.md
+```
+
+### Naming Conventions
+
+- Use lowercase, hyphenated names: `meeting-notes.md`
+- Group related templates in folders
+- Keep names short but descriptive
+
+## Tips
+
+### List Available Variables
+
+Before using a template:
+> "Show me the meeting template and list its variables"
+
+Uses `get-template` to display content and identify `{{variables}}`.
+
+### Batch Creation
+
+> "Create project notes for Alpha, Beta, and Gamma using the project template, all with status='planning'"
+
+The AI applies the template three times with different titles.
+
+### Template Discovery
+
+> "What templates do I have for work-related notes?"
+
+Uses `list-templates` and filters by folder or content.

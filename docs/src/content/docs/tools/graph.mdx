@@ -1,0 +1,151 @@
+---
+title: Graph & Links
+description: Analyze backlinks, forward links, and vault connectivity.
+---
+
+Graph tools help you understand and improve the connections between notes in your vault.
+
+## Link Analysis
+
+### backlinks
+
+Find all notes that link to a given note.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to the note |
+
+**Example prompts:**
+- "What notes link to my 'Python' note?"
+- "Show backlinks to the project overview"
+- "Who references this concept?"
+
+---
+
+### forward-links
+
+Show outgoing links from a note.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to the note |
+
+**Example prompts:**
+- "What does this note link to?"
+- "Show all outgoing links from my index"
+- "What topics does this article reference?"
+
+## Vault Health
+
+### orphan-notes
+
+Find notes with no links to or from them.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `directory` | string | No | Limit to specific directory |
+| `include_no_outgoing` | boolean | No | Also show dead ends (no outgoing links) |
+
+Orphan notes are disconnected from your knowledge graph.
+
+**Example prompts:**
+- "Find orphan notes in my vault"
+- "Show isolated notes that need linking"
+- "Find dead-end notes with no outgoing links"
+
+---
+
+### broken-links
+
+Find wikilinks pointing to non-existent notes.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `directory` | string | No | Limit to specific directory |
+
+Helps identify notes you intended to create or typos in links.
+
+**Example prompts:**
+- "Find all broken links in my vault"
+- "Show wikilinks to missing notes"
+- "What notes am I planning to write?"
+
+## Link Suggestions
+
+### unlinked-mentions
+
+Find text matching a note's name that isn't linked.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to the note |
+
+Finds places where a concept is mentioned but not linked.
+
+**Example prompts:**
+- "Find unlinked mentions of 'Python'"
+- "Where is 'Machine Learning' mentioned but not linked?"
+- "Show potential links to this note"
+
+---
+
+### suggest-links
+
+Suggest notes that should be linked based on content.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to the note |
+| `limit` | number | No | Maximum suggestions (default: 10) |
+
+Analyzes note content and suggests relevant connections.
+
+**Example prompts:**
+- "Suggest links for this note"
+- "What should I link to from this article?"
+- "Find related notes I could connect to"
+
+## Use Cases
+
+### Knowledge Graph Maintenance
+
+Regular maintenance workflow:
+
+1. **Find orphans**: `orphan-notes` reveals disconnected notes
+2. **Fix broken links**: `broken-links` shows missing targets
+3. **Add connections**: `suggest-links` recommends new links
+4. **Convert mentions**: `unlinked-mentions` finds implicit references
+
+### Understanding a Topic
+
+Explore a concept:
+
+1. **See what links here**: `backlinks` shows notes about this topic
+2. **See what it links to**: `forward-links` shows related concepts
+3. **Find more connections**: `suggest-links` discovers hidden relationships
+
+### Example Workflow
+
+> "Help me improve the connectivity of my 'Machine Learning' note"
+
+The AI might:
+
+1. Run `backlinks` - "5 notes link to Machine Learning"
+2. Run `forward-links` - "It links to 3 notes"
+3. Run `unlinked-mentions` - "Found 12 unlinked mentions"
+4. Run `suggest-links` - "Suggest linking to: Neural Networks, Deep Learning, TensorFlow"
+
+## Graph Metrics
+
+### vault-stats
+
+Includes graph statistics when run:
+
+- Total notes and links
+- Average links per note
+- Most linked notes
+- Orphan count
+
+**Example prompts:**
+- "Show me vault statistics including link analysis"
+- "How connected is my vault?"

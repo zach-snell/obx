@@ -1,0 +1,232 @@
+---
+title: Core Operations
+description: Basic CRUD operations for notes and folders.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Core operations handle the fundamental tasks of reading, writing, and organizing notes and folders.
+
+## Note Operations
+
+### list-notes
+
+List all notes in the vault or a specific directory.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `directory` | string | No | Directory path relative to vault root |
+| `limit` | number | No | Maximum notes to return (0 = no limit) |
+| `offset` | number | No | Skip this many notes (for pagination) |
+
+**Example prompts:**
+- "List all notes in my vault"
+- "Show me the first 20 notes in projects/"
+- "What notes are in my inbox folder?"
+
+---
+
+### read-note
+
+Read the content of a specific note.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to note (.md extension required) |
+
+**Example prompts:**
+- "Read the note at projects/Website.md"
+- "Show me the content of my meeting notes from today"
+
+---
+
+### read-notes
+
+Read multiple notes in a single call.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `paths` | string | Yes | Comma-separated or JSON array of paths |
+| `include_frontmatter` | boolean | No | Include frontmatter (default: true) |
+
+**Example prompts:**
+- "Read all three project files: Alpha.md, Beta.md, Gamma.md"
+- "Show me these notes without their frontmatter"
+
+---
+
+### write-note
+
+Create or update a note.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to note (.md extension required) |
+| `content` | string | Yes | Note content |
+
+**Example prompts:**
+- "Create a new note called ideas/New Feature.md"
+- "Update my TODO list with these items"
+
+---
+
+### append-note
+
+Append content to a note (creates if doesn't exist).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to note (.md extension required) |
+| `content` | string | Yes | Content to append |
+
+**Example prompts:**
+- "Add a new task to my inbox"
+- "Append today's log entry to my journal"
+
+---
+
+### delete-note
+
+Delete a note from the vault.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to note (.md extension required) |
+
+**Example prompts:**
+- "Delete the note at archive/old-project.md"
+
+---
+
+### rename-note
+
+Rename a note and update all links to it.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `old_path` | string | Yes | Current path of the note |
+| `new_path` | string | Yes | New path for the note |
+
+**Example prompts:**
+- "Rename 'Draft.md' to 'Published Article.md'"
+- "Move and rename this note to the archive folder"
+
+---
+
+### move-note
+
+Move a note to a new location.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `source` | string | Yes | Current path of the note |
+| `destination` | string | Yes | New path for the note |
+| `update_links` | boolean | No | Update wikilinks (default: true) |
+
+**Example prompts:**
+- "Move inbox/task.md to projects/active/"
+- "Move this note without updating links"
+
+---
+
+### recent-notes
+
+List recently modified notes.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `limit` | number | No | Maximum notes (default: 10) |
+| `directory` | string | No | Limit to specific directory |
+
+**Example prompts:**
+- "Show my 10 most recently modified notes"
+- "What have I worked on in projects/ lately?"
+
+---
+
+### get-note-summary
+
+Get a lightweight summary of a note.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to the note |
+| `lines` | number | No | Preview lines (default: 5) |
+
+Returns: frontmatter, word count, link count, and content preview.
+
+**Example prompts:**
+- "Give me a quick summary of this long note"
+- "What's the status and word count of my draft?"
+
+---
+
+### get-section
+
+Extract a specific heading section from a note.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to the note |
+| `heading` | string | Yes | Heading text (case-insensitive) |
+
+**Example prompts:**
+- "Show me just the 'Requirements' section"
+- "Extract the 'Meeting Notes' heading from this file"
+
+---
+
+### get-headings
+
+List all headings in a note.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Path to the note |
+
+**Example prompts:**
+- "What sections does this note have?"
+- "Show me the outline of my documentation"
+
+## Folder Operations
+
+### list-folders
+
+List all folders in the vault.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `directory` | string | No | Start from specific directory |
+| `include_empty` | boolean | No | Include empty folders (default: true) |
+
+**Example prompts:**
+- "Show me all folders in my vault"
+- "List subfolders of projects/"
+
+---
+
+### create-folder
+
+Create a new folder.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Folder path to create |
+
+**Example prompts:**
+- "Create a new folder called 'projects/2024'"
+
+---
+
+### delete-folder
+
+Delete a folder.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `path` | string | Yes | Folder path to delete |
+| `force` | boolean | No | Delete even if not empty (default: false) |
+
+**Example prompts:**
+- "Delete the empty temp folder"
+- "Force delete the old archive folder and its contents"

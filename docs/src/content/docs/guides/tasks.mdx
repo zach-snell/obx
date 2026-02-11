@@ -1,0 +1,293 @@
+---
+title: Task Management
+description: Managing tasks and todos with obsidian-go-mcp.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+obsidian-go-mcp provides tools to manage Markdown checkbox tasks across your vault.
+
+## Task Format
+
+Tasks are standard Markdown checkboxes:
+
+```markdown
+- [ ] Open task
+- [x] Completed task
+```
+
+### Extended Task Syntax
+
+Many users add metadata to tasks:
+
+```markdown
+- [ ] Review PR #123 #work @john 📅 2024-03-15
+- [ ] Buy groceries #personal ⏰ 17:00
+- [x] Submit report ✅ 2024-03-10
+```
+
+obsidian-go-mcp recognizes and preserves this syntax.
+
+## Task Tools
+
+### list-tasks
+
+List all tasks across your vault.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | Filter: all, open, completed (default: all) |
+| `directory` | string | Limit to specific directory |
+
+**Example prompts:**
+- "Show all my open tasks"
+- "List completed tasks in projects/"
+- "What tasks do I have?"
+
+### toggle-task
+
+Toggle a task's completion status.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `path` | string | Path to the note |
+| `line` | number | Line number of the task (1-based) |
+
+**Example prompts:**
+- "Mark the third task in inbox.md as done"
+- "Complete the task on line 15"
+
+## Common Workflows
+
+### Daily Task Review
+
+<Steps>
+
+1. **View open tasks**
+   > "Show me all open tasks"
+
+2. **Filter by context**
+   > "Just show tasks tagged with #work"
+
+3. **Complete tasks**
+   > "Mark the first three tasks as done"
+
+4. **Add new tasks**
+   > "Add a task to my inbox: Review quarterly report"
+
+</Steps>
+
+### Inbox Processing
+
+Process tasks from a central inbox:
+
+> "Show tasks in my inbox, then help me distribute them to the right projects"
+
+The AI will:
+1. List tasks from inbox.md
+2. Help categorize each task
+3. Move relevant tasks to project notes
+4. Keep inbox clean
+
+### Project Task Tracking
+
+Track tasks within a project:
+
+> "Show all tasks in my 'Website Redesign' project"
+
+```
+list-tasks: directory=projects/Website Redesign
+```
+
+## Task Organization Patterns
+
+### Centralized Inbox
+
+Keep a single inbox for quick capture:
+
+```markdown
+# Inbox
+
+- [ ] Call dentist
+- [ ] Review PR #456
+- [ ] Research GraphQL
+```
+
+Process regularly with:
+> "Help me process my inbox - categorize tasks and move them to appropriate notes"
+
+### Project-Based Tasks
+
+Tasks live in project notes:
+
+```markdown
+# Website Redesign
+
+## Tasks
+- [ ] Create wireframes
+- [ ] Review with stakeholders
+- [x] Define requirements
+
+## Notes
+...
+```
+
+### Daily Note Tasks
+
+Tasks in daily notes:
+
+```markdown
+# 2024-03-15
+
+## Tasks for Today
+- [ ] Morning standup
+- [ ] Code review
+- [ ] Deploy to staging
+```
+
+## Finding Tasks
+
+### By Tag
+
+> "Find all tasks tagged with #urgent"
+
+Uses `search-vault` with task checkbox pattern + tag.
+
+### By Project
+
+> "Show tasks in the marketing project"
+
+Uses `list-tasks` with directory filter.
+
+### By Date
+
+> "Find tasks due this week"
+
+Searches for date patterns in task text.
+
+### Overdue Tasks
+
+> "Find tasks with dates before today that aren't completed"
+
+The AI parses dates and filters results.
+
+## Task Metadata Patterns
+
+### Priority
+
+```markdown
+- [ ] 🔴 Critical bug fix
+- [ ] 🟡 Medium priority feature
+- [ ] 🟢 Nice to have improvement
+```
+
+Or with tags:
+```markdown
+- [ ] Fix login bug #p1
+- [ ] Add dark mode #p2
+```
+
+### Due Dates
+
+```markdown
+- [ ] Submit report 📅 2024-03-15
+- [ ] Call client due::2024-03-20
+```
+
+### Assignments
+
+```markdown
+- [ ] Review code @john
+- [ ] Write docs @sarah
+```
+
+### Context Tags
+
+```markdown
+- [ ] Call dentist #personal #phone
+- [ ] Review PR #work #code-review
+```
+
+## Advanced Task Queries
+
+### Combine Conditions
+
+> "Find all open tasks tagged #work that are due this week"
+
+### Group and Count
+
+> "How many open tasks do I have per project?"
+
+### Find Stale Tasks
+
+> "Show tasks that have been open for more than 30 days"
+
+## Task Reports
+
+### Weekly Summary
+
+> "Summarize tasks completed this week"
+
+The AI will:
+1. Search daily notes for the week
+2. Find completed tasks
+3. Group by project/tag
+4. Generate summary
+
+### Project Progress
+
+> "Show task completion progress for the Website Redesign project"
+
+```
+Total: 25 tasks
+Completed: 18 (72%)
+Open: 7
+```
+
+<Aside type="tip">
+Create a "Task Dashboard" note that links to your main task views. Ask the AI to update it periodically with current counts and priorities.
+</Aside>
+
+## Integration with Dataview
+
+If you use Dataview, tasks can have inline fields:
+
+```markdown
+- [ ] Review code [due:: 2024-03-15] [priority:: high]
+```
+
+Query with:
+> "Find tasks where priority is high"
+
+Uses `query-inline-fields` to find matching tasks.
+
+## Best Practices
+
+### Keep Tasks Atomic
+
+Bad:
+```markdown
+- [ ] Redesign entire website
+```
+
+Good:
+```markdown
+- [ ] Create homepage wireframe
+- [ ] Design navigation component
+- [ ] Build responsive header
+```
+
+### Use Consistent Syntax
+
+Pick a format and stick with it:
+```markdown
+✓ - [ ] Task #tag 📅 date
+✗ - [ ] Task (tag) - date
+✗ - [ ] Task, tag, date
+```
+
+### Regular Processing
+
+- Process inbox daily
+- Review projects weekly
+- Archive completed tasks monthly

@@ -1,0 +1,198 @@
+---
+title: Periodic Notes
+description: Daily, weekly, monthly, quarterly, and yearly notes.
+---
+
+Periodic notes help you maintain regular journaling, reviews, and planning across different time scales.
+
+## Daily Notes
+
+### daily-note
+
+Get or create a daily note.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `date` | string | No | Date for the note (default: today) |
+| `folder` | string | No | Folder for daily notes (default: 'daily') |
+| `format` | string | No | Date format for filename (default: '2006-01-02') |
+| `create` | boolean | No | Create if missing (default: true) |
+
+**Date formats supported:**
+- `2024-01-15` (YYYY-MM-DD)
+- `01-15-2024` (MM-DD-YYYY)
+- `Jan 15, 2024`
+- `yesterday`, `today`, `tomorrow`
+
+**Example prompts:**
+- "Open today's daily note"
+- "Create a daily note for yesterday"
+- "Show me my daily note from January 15th"
+
+---
+
+### list-daily-notes
+
+List daily notes.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `folder` | string | No | Folder for daily notes (default: 'daily') |
+| `limit` | number | No | Maximum notes to return (default: 30) |
+
+**Example prompts:**
+- "Show my last 10 daily notes"
+- "List all daily notes from this month"
+
+## Weekly Notes
+
+### weekly-note
+
+Get or create a weekly note.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `date` | string | No | Date within the week (default: this week) |
+| `folder` | string | No | Folder for weekly notes (default: 'weekly') |
+| `format` | string | No | Filename format (default: '2006-W02' for YYYY-Www) |
+| `create` | boolean | No | Create if missing (default: true) |
+
+Any date within a week will access that week's note.
+
+**Example prompts:**
+- "Open this week's note"
+- "Create a weekly note for last week"
+- "Show the weekly note containing January 15th"
+
+## Monthly Notes
+
+### monthly-note
+
+Get or create a monthly note.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `date` | string | No | Date within the month (default: this month) |
+| `folder` | string | No | Folder for monthly notes (default: 'monthly') |
+| `format` | string | No | Filename format (default: '2006-01' for YYYY-MM) |
+| `create` | boolean | No | Create if missing (default: true) |
+
+**Example prompts:**
+- "Open this month's note"
+- "Create a monthly note for December 2023"
+
+## Quarterly Notes
+
+### quarterly-note
+
+Get or create a quarterly note.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `date` | string | No | Date within the quarter (default: this quarter) |
+| `folder` | string | No | Folder (default: 'quarterly') |
+| `create` | boolean | No | Create if missing (default: true) |
+
+Quarters: Q1 (Jan-Mar), Q2 (Apr-Jun), Q3 (Jul-Sep), Q4 (Oct-Dec)
+
+**Example prompts:**
+- "Open this quarter's note"
+- "Create a Q1 2024 planning note"
+
+## Yearly Notes
+
+### yearly-note
+
+Get or create a yearly note.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `date` | string | No | Date within the year (default: this year) |
+| `folder` | string | No | Folder (default: 'yearly') |
+| `create` | boolean | No | Create if missing (default: true) |
+
+**Example prompts:**
+- "Open this year's note"
+- "Create a 2024 annual review note"
+
+## List Periodic Notes
+
+### list-periodic-notes
+
+List periodic notes by type.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `type` | string | No | Type: daily, weekly, monthly, quarterly, yearly (default: weekly) |
+| `folder` | string | No | Override folder location |
+| `limit` | number | No | Maximum notes to return (default: 20) |
+
+**Example prompts:**
+- "List my weekly notes"
+- "Show all monthly notes from 2023"
+- "List quarterly notes"
+
+## Folder Structure
+
+Default folder structure:
+
+```
+vault/
+├── daily/
+│   ├── 2024-01-15.md
+│   ├── 2024-01-16.md
+│   └── ...
+├── weekly/
+│   ├── 2024-W03.md
+│   └── ...
+├── monthly/
+│   ├── 2024-01.md
+│   └── ...
+├── quarterly/
+│   ├── 2024-Q1.md
+│   └── ...
+└── yearly/
+    ├── 2024.md
+    └── ...
+```
+
+## Custom Formats
+
+### Go Time Format Reference
+
+obsidian-go-mcp uses Go's time format with reference date `Mon Jan 2 15:04:05 MST 2006`:
+
+| Pattern | Meaning | Example |
+|---------|---------|---------|
+| `2006` | 4-digit year | 2024 |
+| `06` | 2-digit year | 24 |
+| `01` | Zero-padded month | 03 |
+| `1` | Month | 3 |
+| `Jan` | Month abbreviation | Mar |
+| `02` | Zero-padded day | 05 |
+| `2` | Day | 5 |
+| `Monday` | Day name | Tuesday |
+| `Mon` | Day abbreviation | Tue |
+
+**Custom format examples:**
+- `2006-01-02` → `2024-03-15`
+- `January 2006` → `March 2024`
+- `2006-W02` → `2024-W11` (ISO week)
+
+## Workflows
+
+### Daily Journaling
+
+> "Create today's daily note and add my morning reflection"
+
+### Weekly Review
+
+> "Open this week's note and summarize what I accomplished from my daily notes"
+
+### Monthly Planning
+
+> "Create next month's note with goals from my quarterly objectives"
+
+### Annual Review
+
+> "Open my 2024 yearly note and help me reflect on the year"
