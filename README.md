@@ -1,54 +1,42 @@
 # obsidian-go-mcp
 
-A fast, lightweight MCP (Model Context Protocol) server for Obsidian vaults written in Go.
+[![CI](https://github.com/zach-snell/obsidian-go-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/zach-snell/obsidian-go-mcp/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/zach-snell/obsidian-go-mcp)](https://goreportcard.com/report/github.com/zach-snell/obsidian-go-mcp)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-## Installation
+A fast, lightweight [MCP](https://modelcontextprotocol.io/) server for [Obsidian](https://obsidian.md/) vaults. Built in Go for speed and simplicity.
 
-### Option 1: Go Install (Recommended)
+## Why This Project?
+
+| Feature | obsidian-go-mcp | Other MCP Servers |
+|---------|-----------------|-------------------|
+| **No plugins required** | Works directly with vault files | Often require Obsidian REST API plugin |
+| **Single binary** | One file, zero dependencies | Node.js/Python runtime needed |
+| **Cross-platform** | macOS, Linux, Windows | Often have platform issues |
+| **67 tools** | Comprehensive vault operations | Typically 10-20 tools |
+| **Fast startup** | ~10ms | Seconds for interpreted languages |
+
+## Quick Start
+
+**1. Download the binary:**
 
 ```bash
-go install github.com/zach-snell/obsidian-go-mcp/cmd/server@latest
-```
-
-The binary will be installed as `server`. You may want to rename it:
-
-```bash
-mv $(go env GOPATH)/bin/server $(go env GOPATH)/bin/obsidian-mcp
-```
-
-### Option 2: Download Binary
-
-```bash
-# Linux (amd64)
-curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-linux-amd64 -o obsidian-mcp
-chmod +x obsidian-mcp
-
-# Linux (arm64)
-curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-linux-arm64 -o obsidian-mcp
-chmod +x obsidian-mcp
-
 # macOS (Apple Silicon)
-curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-darwin-arm64 -o obsidian-mcp
-chmod +x obsidian-mcp
+curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-darwin-arm64 -o obsidian-mcp && chmod +x obsidian-mcp
 
 # macOS (Intel)
-curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-darwin-amd64 -o obsidian-mcp
-chmod +x obsidian-mcp
+curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-darwin-amd64 -o obsidian-mcp && chmod +x obsidian-mcp
+
+# Linux
+curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-linux-amd64 -o obsidian-mcp && chmod +x obsidian-mcp
 ```
 
-### Option 3: Build from Source
+**2. Configure your MCP client:**
 
-```bash
-git clone https://github.com/zach-snell/obsidian-go-mcp.git
-cd obsidian-go-mcp
-go build -o obsidian-mcp ./cmd/server
-```
+<details>
+<summary><b>Claude Desktop</b></summary>
 
-## Configuration
-
-### Claude Desktop
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
@@ -60,245 +48,344 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
   }
 }
 ```
+</details>
 
-### OpenCode
+<details>
+<summary><b>Claude Code</b></summary>
 
-Add to `opencode.json`:
+The server will be auto-discovered, or add to your config:
 
 ```json
 {
-  "mcp": {
+  "mcpServers": {
     "obsidian": {
-      "type": "local",
-      "command": ["/path/to/obsidian-mcp", "/path/to/your/vault"],
-      "enabled": true
+      "command": "/path/to/obsidian-mcp",
+      "args": ["/path/to/your/vault"]
     }
   }
 }
 ```
+</details>
 
-### Generic MCP Client
+<details>
+<summary><b>Other MCP Clients</b></summary>
 
 ```bash
-# Run the server (communicates via stdio)
+# Run directly (communicates via stdio)
 ./obsidian-mcp /path/to/vault
 ```
+</details>
 
-## Features
+**3. Start using it!** Ask your AI assistant to search your vault, create notes, manage tasks, etc.
 
-- **CRUD Operations**: List, read, write, delete, append, move notes
-- **Batch Operations**: Read multiple notes, bulk tagging, bulk moves
-- **Search**: Content search, regex search, date search, tag search, frontmatter queries
-- **Task Parsing**: Extract checkboxes with due dates, priorities, tags
-- **Graph Analysis**: Backlinks, forward links, orphan detection, broken links, suggest links
-- **Knowledge Gap Analysis**: Find stubs, outdated notes, unlinked mentions
-- **Periodic Notes**: Daily, weekly, monthly, quarterly, yearly notes
-- **Templates**: Create notes from templates with variable substitution
-- **Canvas Support**: Read, create, and modify Obsidian canvas files
-- **Folder Management**: List, create, delete folders
-- **MOC Generation**: Generate and update Maps of Content
-- **Note Refactoring**: Split, merge, extract sections, duplicate notes
-- **Inline Fields**: Dataview-style field support (key:: value)
-- **Vault Statistics**: Word counts, task completion %, top tags
-- **Security**: Path traversal protection
+## Installation Options
 
-## MCP Tools (67 total)
+### Pre-built Binaries (Recommended)
 
-### Core Note Operations
+Download from [Releases](https://github.com/zach-snell/obsidian-go-mcp/releases/latest):
+
+| Platform | Binary |
+|----------|--------|
+| macOS (Apple Silicon) | `obsidian-mcp-darwin-arm64` |
+| macOS (Intel) | `obsidian-mcp-darwin-amd64` |
+| Linux (x64) | `obsidian-mcp-linux-amd64` |
+| Linux (ARM) | `obsidian-mcp-linux-arm64` |
+| Windows | `obsidian-mcp-windows-amd64.exe` |
+
+### Go Install
+
+```bash
+go install github.com/zach-snell/obsidian-go-mcp/cmd/server@latest
+mv $(go env GOPATH)/bin/server $(go env GOPATH)/bin/obsidian-mcp
+```
+
+### Build from Source
+
+```bash
+git clone https://github.com/zach-snell/obsidian-go-mcp.git
+cd obsidian-go-mcp
+go build -o obsidian-mcp ./cmd/server
+```
+
+---
+
+## Tools Reference (67 total)
+
+### Core Operations
+
 | Tool | Description |
 |------|-------------|
-| `list-notes` | List markdown files (supports pagination) |
-| `read-note` | Read note content |
-| `read-notes` | Read multiple notes in one call |
-| `write-note` | Create/update note |
-| `append-note` | Append content to note (quick capture) |
-| `delete-note` | Delete note |
-| `rename-note` | Rename note and update all links |
-| `move-note` | Move note to new location with link updates |
-| `recent-notes` | List recently modified notes |
-| `duplicate-note` | Create a copy of a note |
+| `list-notes` | List notes with pagination |
+| `read-note` | Read a single note |
+| `read-notes` | Read multiple notes at once |
+| `write-note` | Create or update a note |
+| `append-note` | Append content to a note |
+| `delete-note` | Delete a note |
+| `rename-note` | Rename and update all links |
+| `move-note` | Move to new location |
+| `duplicate-note` | Copy a note |
+| `recent-notes` | Recently modified notes |
 
-### Batch Operations
+### Search
+
 | Tool | Description |
 |------|-------------|
-| `get-note-summary` | Get lightweight summary (frontmatter, stats, preview) |
-| `get-section` | Extract a specific heading section |
-| `get-headings` | List all headings in a note |
-| `search-headings` | Search across all headings in vault |
+| `search-vault` | Full-text content search |
+| `search-advanced` | Multi-term with AND/OR |
+| `search-regex` | Regular expression search |
+| `search-by-date` | Find by modification date |
+| `search-by-tags` | Tag-based search |
+| `search-headings` | Search heading text |
+| `query-frontmatter` | Search YAML properties |
+| `discover-mocs` | Find Maps of Content |
 
-### Search & Discovery
+### Note Context
+
 | Tool | Description |
 |------|-------------|
-| `search-vault` | Content search |
-| `search-advanced` | Multi-term search with AND/OR operators |
-| `search-by-date` | Find notes by modification date range |
-| `search-regex` | Search using regular expressions |
-| `search-by-tags` | Tag-based search (AND) |
-| `discover-mocs` | Find MOC structure |
-| `query-frontmatter` | Search by YAML properties (e.g., `status=draft`) |
-| `get-frontmatter` | Get frontmatter of a note |
+| `get-note-summary` | Lightweight metadata + preview |
+| `get-headings` | List all headings |
+| `get-section` | Extract a specific section |
+| `get-frontmatter` | Get YAML frontmatter |
+| `get-inline-fields` | Get Dataview fields |
 
-### Frontmatter Manipulation
+### Frontmatter & Fields
+
 | Tool | Description |
 |------|-------------|
-| `set-frontmatter` | Set or update a frontmatter property |
-| `remove-frontmatter-key` | Remove a property from frontmatter |
-| `add-alias` | Add an alias to a note |
-| `add-tag-to-frontmatter` | Add a tag to frontmatter tags array |
+| `set-frontmatter` | Set a property |
+| `remove-frontmatter-key` | Remove a property |
+| `add-alias` | Add an alias |
+| `add-tag-to-frontmatter` | Add a tag |
+| `set-inline-field` | Set Dataview field |
+| `query-inline-fields` | Query by field values |
 
-### Inline Fields (Dataview)
+### Graph & Links
+
 | Tool | Description |
 |------|-------------|
-| `get-inline-fields` | Extract Dataview-style fields (key:: value) |
-| `set-inline-field` | Set or update an inline field |
-| `query-inline-fields` | Search notes by inline field values |
+| `backlinks` | Notes linking to this note |
+| `forward-links` | Outgoing links |
+| `orphan-notes` | Unconnected notes |
+| `broken-links` | Links to missing notes |
+| `unlinked-mentions` | Text that could be linked |
+| `suggest-links` | AI-friendly link suggestions |
 
-### Graph Analysis
+### Knowledge Gaps
+
 | Tool | Description |
 |------|-------------|
-| `backlinks` | Find notes linking TO a given note |
-| `forward-links` | Show outgoing links FROM a note |
-| `orphan-notes` | Find notes with no links to/from them |
-| `broken-links` | Find wikilinks pointing to non-existent notes |
-
-### Knowledge Gap Analysis
-| Tool | Description |
-|------|-------------|
-| `find-stubs` | Find short notes that may need expansion |
-| `find-outdated` | Find notes not modified recently |
-| `unlinked-mentions` | Find text mentions not linked |
-| `suggest-links` | Suggest notes that should be linked |
+| `find-stubs` | Short notes needing expansion |
+| `find-outdated` | Notes not updated recently |
 
 ### Tasks
+
 | Tool | Description |
 |------|-------------|
-| `list-tasks` | Parse checkboxes with metadata |
-| `toggle-task` | Toggle task completion |
+| `list-tasks` | All tasks with metadata |
+| `toggle-task` | Check/uncheck a task |
 
 ### Periodic Notes
+
 | Tool | Description |
 |------|-------------|
 | `daily-note` | Get or create daily note |
-| `list-daily-notes` | List daily notes |
 | `weekly-note` | Get or create weekly note |
 | `monthly-note` | Get or create monthly note |
 | `quarterly-note` | Get or create quarterly note |
 | `yearly-note` | Get or create yearly note |
-| `list-periodic-notes` | List periodic notes by type |
+| `list-daily-notes` | List daily notes |
+| `list-periodic-notes` | List by type |
 
 ### Templates
-| Tool | Description |
-|------|-------------|
-| `list-templates` | List available templates |
-| `get-template` | Show template content and variables |
-| `apply-template` | Create note from template with variable substitution |
 
-### MOC & Index Generation
 | Tool | Description |
 |------|-------------|
-| `generate-moc` | Generate a Map of Content from directory |
-| `update-moc` | Update existing MOC with new notes |
-| `generate-index` | Generate alphabetical index of all notes |
+| `list-templates` | Available templates |
+| `get-template` | View template + variables |
+| `apply-template` | Create note from template |
 
-### Note Refactoring
+### Organization
+
 | Tool | Description |
 |------|-------------|
-| `split-note` | Split a note at heading boundaries |
-| `merge-notes` | Merge multiple notes into one |
-| `extract-section` | Extract a section to a new note |
+| `generate-moc` | Generate Map of Content |
+| `update-moc` | Add new notes to MOC |
+| `generate-index` | Alphabetical index |
+| `split-note` | Split at headings |
+| `merge-notes` | Combine multiple notes |
+| `extract-section` | Move section to new note |
 
 ### Folders
+
 | Tool | Description |
 |------|-------------|
-| `list-folders` | List all folders in the vault |
-| `create-folder` | Create a new folder |
-| `delete-folder` | Delete a folder |
+| `list-folders` | All folders |
+| `create-folder` | Create folder |
+| `delete-folder` | Delete folder |
 
 ### Bulk Operations
+
 | Tool | Description |
 |------|-------------|
-| `bulk-tag` | Add/remove tags from multiple notes |
-| `bulk-move` | Move multiple notes to a folder |
-| `bulk-set-frontmatter` | Set frontmatter property on multiple notes |
+| `bulk-tag` | Add/remove tags from many notes |
+| `bulk-move` | Move many notes |
+| `bulk-set-frontmatter` | Set property on many notes |
 
 ### Canvas
+
 | Tool | Description |
 |------|-------------|
-| `list-canvases` | List all canvas files |
-| `read-canvas` | Read and parse a canvas file |
-| `create-canvas` | Create a new empty canvas |
-| `add-canvas-node` | Add a node (text, file, link, group) |
-| `add-canvas-edge` | Add an edge between nodes |
+| `list-canvases` | All canvas files |
+| `read-canvas` | Parse canvas content |
+| `create-canvas` | New empty canvas |
+| `add-canvas-node` | Add node to canvas |
+| `add-canvas-edge` | Connect nodes |
 
 ### Analytics
+
 | Tool | Description |
 |------|-------------|
-| `vault-stats` | Vault statistics (notes, words, tasks, top tags)
+| `vault-stats` | Notes, words, tasks, top tags |
+
+---
+
+## Usage Examples
+
+### Daily Workflow
+
+```
+"Create today's daily note and show me my open tasks"
+"What did I work on last week?"
+"Find notes I haven't touched in 3 months"
+```
+
+### Research & Writing
+
+```
+"Search my vault for anything about 'machine learning'"
+"Find all notes tagged #project and #active"
+"What notes mention 'API design' but aren't linked?"
+```
+
+### Vault Maintenance
+
+```
+"Find orphan notes with no connections"
+"Show me stub notes under 100 words"
+"Generate a MOC for my projects folder"
+```
+
+### Bulk Operations
+
+```
+"Add #archive tag to all notes in the old-projects folder"
+"Move all notes tagged #2023 to the archive folder"
+"Set status: complete on these 5 project notes"
+```
+
+---
 
 ## Template Variables
 
-Templates support `{{variable}}` and `{{variable:default}}` syntax:
+Create templates in your `templates/` folder:
 
 ```markdown
 ---
 title: {{title}}
 date: {{date}}
-author: {{author:Anonymous}}
+status: {{status:draft}}
 ---
 
 # {{title}}
 
-Created on {{date}} at {{time}}.
+Created: {{datetime}}
 ```
 
 ### Built-in Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `{{date}}` | Current date | `2024-01-15` |
-| `{{time}}` | Current time | `14:30` |
-| `{{datetime}}` | Date and time | `2024-01-15 14:30` |
-| `{{year}}` | Current year | `2024` |
-| `{{month}}` | Current month | `01` |
-| `{{day}}` | Current day | `15` |
-| `{{title}}` | Note title (without .md) | `My Note` |
-| `{{filename}}` | Full filename | `My Note.md` |
-| `{{folder}}` | Target folder | `notes` |
-| `{{timestamp}}` | Unix timestamp | `1705332600` |
+| Variable | Example |
+|----------|---------|
+| `{{date}}` | `2024-01-15` |
+| `{{time}}` | `14:30` |
+| `{{datetime}}` | `2024-01-15 14:30` |
+| `{{year}}` | `2024` |
+| `{{month}}` | `01` |
+| `{{day}}` | `15` |
+| `{{title}}` | Note title |
+| `{{filename}}` | `Note.md` |
+| `{{timestamp}}` | Unix timestamp |
 
-Pass custom variables: `variables="author=John,project=Alpha"`
+Use `{{var:default}}` for default values.
+
+---
 
 ## Task Format
 
-Compatible with Obsidian Tasks plugin:
+Compatible with [Obsidian Tasks](https://publish.obsidian.md/tasks/) plugin:
 
 ```markdown
 - [ ] Open task
 - [x] Completed task
-- [ ] Due date 📅 2024-01-15
+- [ ] Has due date 📅 2024-01-15
 - [ ] High priority ⏫
 - [ ] Medium priority 🔼
 - [ ] Low priority 🔽
-- [ ] With tags #project #urgent
+- [ ] Tagged #project #urgent
 ```
+
+---
+
+## Security
+
+- **Path traversal protection**: All file operations are sandboxed to your vault
+- **Read-only by default**: Write operations require explicit tool calls
+- **No network access**: The server only accesses local files
+
+---
 
 ## Development
 
-Requires Go 1.21+ and [mise](https://mise.jdx.dev/) (optional but recommended).
-
 ```bash
-# With mise
-mise install           # Install Go + tools
-mise run build         # Build binary
-mise run test          # Run tests
-mise run lint          # Run linters
-mise run check         # All checks (lint + test + vuln)
-mise run fuzz          # Run fuzz tests
+# Setup (requires Go 1.21+)
+git clone https://github.com/zach-snell/obsidian-go-mcp.git
+cd obsidian-go-mcp
+
+# With mise (recommended)
+mise install && mise run check
 
 # Without mise
 go build -o obsidian-mcp ./cmd/server
 go test -race -cover ./...
 ```
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `mise run build` | Build binary |
+| `mise run test` | Run tests |
+| `mise run lint` | Run linters |
+| `mise run check` | All checks |
+| `mise run fuzz` | Fuzz tests |
+
+---
+
+## FAQ
+
+**Q: Do I need Obsidian running?**  
+A: No. This server works directly with vault files on disk.
+
+**Q: Will this conflict with Obsidian?**  
+A: No. Both can access the same files safely.
+
+**Q: What about sync (iCloud, Dropbox, etc)?**  
+A: Works fine. The server reads/writes standard markdown files.
+
+**Q: Can I use multiple vaults?**  
+A: Run multiple server instances, each pointing to a different vault.
+
+---
 
 ## License
 
