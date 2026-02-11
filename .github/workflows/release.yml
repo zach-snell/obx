@@ -62,3 +62,8 @@ jobs:
             dist/*
           generate_release_notes: true
           draft: false
+
+      - name: Update latest tag
+        run: |
+          git tag -f latest
+          git push -f origin latest
