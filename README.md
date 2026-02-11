@@ -3,8 +3,11 @@
 [![CI](https://github.com/zach-snell/obsidian-go-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/zach-snell/obsidian-go-mcp/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/zach-snell/obsidian-go-mcp)](https://goreportcard.com/report/github.com/zach-snell/obsidian-go-mcp)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-zach--snell.github.io-blue)](https://zach-snell.github.io/obsidian-go-mcp/)
 
 A fast, lightweight [MCP](https://modelcontextprotocol.io/) server for [Obsidian](https://obsidian.md/) vaults. Built in Go for speed and simplicity.
+
+**[Documentation](https://zach-snell.github.io/obsidian-go-mcp/)** | **[Quick Start](#quick-start)** | **[Tools Reference](#tools-reference-67-total)**
 
 ## Why This Project?
 

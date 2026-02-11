@@ -1,0 +1,44 @@
+---
+title: obsidian-go-mcp
+description: A fast, lightweight MCP server for Obsidian vaults written in Go.
+template: splash
+hero:
+  tagline: Give AI assistants full access to your Obsidian vault. Single binary, 67 tools, zero dependencies.
+  image:
+    file: ../../assets/houston.webp
+  actions:
+    - text: Get Started
+      link: /obsidian-go-mcp/getting-started/introduction/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/zach-snell/obsidian-go-mcp
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Why obsidian-go-mcp?
+
+<CardGrid stagger>
+  <Card title="No Plugins Required" icon="puzzle">
+    Works directly with your vault files. No Obsidian REST API plugin needed.
+  </Card>
+  <Card title="Single Binary" icon="rocket">
+    One file, zero runtime dependencies. No Node.js or Python required.
+  </Card>
+  <Card title="67 Tools" icon="list-format">
+    Search, templates, periodic notes, canvas, bulk operations, and more.
+  </Card>
+  <Card title="~10ms Startup" icon="star">
+    Built in Go for speed. Low memory footprint.
+  </Card>
+</CardGrid>
+
+## Quick Install
+
+```bash
+curl -sSL https://raw.githubusercontent.com/zach-snell/obsidian-go-mcp/main/install.sh | bash
+```
+
+Then [configure your MCP client](/obsidian-go-mcp/getting-started/configuration/) and start chatting with your vault!
