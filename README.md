@@ -18,7 +18,16 @@ A fast, lightweight [MCP](https://modelcontextprotocol.io/) server for [Obsidian
 
 ## Quick Start
 
-**1. Download the binary:**
+**1. Install with one command:**
+
+```bash
+curl -sSL https://raw.githubusercontent.com/zach-snell/obsidian-go-mcp/main/install.sh | bash
+```
+
+This auto-detects your OS/architecture and installs to `/usr/local/bin`.
+
+<details>
+<summary>Manual download</summary>
 
 ```bash
 # macOS (Apple Silicon)
@@ -30,6 +39,7 @@ curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download
 # Linux
 curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-linux-amd64 -o obsidian-mcp && chmod +x obsidian-mcp
 ```
+</details>
 
 **2. Configure your MCP client:**
 
@@ -105,6 +115,14 @@ mv $(go env GOPATH)/bin/server $(go env GOPATH)/bin/obsidian-mcp
 git clone https://github.com/zach-snell/obsidian-go-mcp.git
 cd obsidian-go-mcp
 go build -o obsidian-mcp ./cmd/server
+```
+
+### Upgrade
+
+Just run the install script again - it always fetches the latest version:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/zach-snell/obsidian-go-mcp/main/install.sh | bash
 ```
 
 ---
