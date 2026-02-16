@@ -53,6 +53,10 @@ func (v *Vault) DiscoverMOCsHandler(ctx context.Context, req *mcp.CallToolReques
 		searchPath = filepath.Join(v.path, dir)
 	}
 
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
+
 	var mocs []MOC
 
 	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {

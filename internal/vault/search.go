@@ -27,6 +27,10 @@ func (v *Vault) SearchVaultHandler(ctx context.Context, req *mcp.CallToolRequest
 		searchPath = filepath.Join(v.path, dir)
 	}
 
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
+
 	queryLower := strings.ToLower(query)
 	var results []SearchResult
 

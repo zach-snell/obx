@@ -28,6 +28,10 @@ func (v *Vault) collectNotes(dir string, recursive bool) ([]noteInfo, error) {
 		searchPath = filepath.Join(v.path, dir)
 	}
 
+	if !v.isPathSafe(searchPath) {
+		return nil, fmt.Errorf("search path must be within vault")
+	}
+
 	var notes []noteInfo
 
 	walkFn := func(path string, info os.FileInfo, err error) error {
@@ -85,6 +89,10 @@ func (v *Vault) writeGeneratedFile(output, content, fileType string, noteCount i
 		output += ".md"
 	}
 	fullPath := filepath.Join(v.path, output)
+	if !v.isPathSafe(fullPath) {
+		return nil, fmt.Errorf("output path must be within vault")
+	}
+
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create directory: %v", err)
 	}
@@ -258,6 +266,10 @@ func (v *Vault) UpdateMOCHandler(ctx context.Context, req *mcp.CallToolRequest, 
 	}
 
 	fullPath := filepath.Join(v.path, mocPath)
+	if !v.isPathSafe(fullPath) {
+		return nil, nil, fmt.Errorf("path must be within vault")
+	}
+
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read MOC: %v", err)

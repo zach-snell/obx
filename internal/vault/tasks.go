@@ -189,8 +189,7 @@ func (v *Vault) ToggleTaskHandler(ctx context.Context, req *mcp.CallToolRequest,
 	fullPath := filepath.Join(v.path, path)
 
 	// Security: ensure path is within vault
-	rel, err := filepath.Rel(v.path, filepath.Clean(fullPath))
-	if err != nil || strings.HasPrefix(rel, "..") {
+	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 

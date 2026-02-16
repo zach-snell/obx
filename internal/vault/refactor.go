@@ -26,6 +26,11 @@ func (v *Vault) ExtractNoteHandler(ctx context.Context, req *mcp.CallToolRequest
 	}
 
 	fullPath := filepath.Join(v.path, path)
+
+	if !v.isPathSafe(fullPath) {
+		return nil, nil, fmt.Errorf("path must be within vault")
+	}
+
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read note: %v", err)
@@ -47,6 +52,10 @@ func (v *Vault) ExtractNoteHandler(ctx context.Context, req *mcp.CallToolRequest
 		outputDir = filepath.Dir(path)
 	}
 	outputDirFull := filepath.Join(v.path, outputDir)
+	if !v.isPathSafe(outputDirFull) {
+		return nil, nil, fmt.Errorf("output directory must be within vault")
+	}
+
 	if err := os.MkdirAll(outputDirFull, 0o755); err != nil {
 		return nil, nil, fmt.Errorf("failed to create output directory: %v", err)
 	}
@@ -182,6 +191,10 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req *mcp.CallToolRequest,
 		}
 
 		fullPath := filepath.Join(v.path, p)
+		if !v.isPathSafe(fullPath) {
+			return nil, nil, fmt.Errorf("path must be within vault: %s", p)
+		}
+
 		content, err := os.ReadFile(fullPath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to read %s: %v", p, err)
@@ -209,6 +222,10 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req *mcp.CallToolRequest,
 		output += ".md"
 	}
 	outputFull := filepath.Join(v.path, output)
+	if !v.isPathSafe(outputFull) {
+		return nil, nil, fmt.Errorf("output path must be within vault")
+	}
+
 	if err := os.MkdirAll(filepath.Dir(outputFull), 0o755); err != nil {
 		return nil, nil, fmt.Errorf("failed to create directory: %v", err)
 	}
@@ -259,6 +276,10 @@ func (v *Vault) ExtractSectionHandler(ctx context.Context, req *mcp.CallToolRequ
 	}
 
 	fullPath := filepath.Join(v.path, path)
+	if !v.isPathSafe(fullPath) {
+		return nil, nil, fmt.Errorf("path must be within vault")
+	}
+
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read note: %v", err)
@@ -279,6 +300,10 @@ func (v *Vault) ExtractSectionHandler(ctx context.Context, req *mcp.CallToolRequ
 	}
 
 	outputFull := filepath.Join(v.path, output)
+	if !v.isPathSafe(outputFull) {
+		return nil, nil, fmt.Errorf("output path must be within vault")
+	}
+
 	if err := os.MkdirAll(filepath.Dir(outputFull), 0o755); err != nil {
 		return nil, nil, fmt.Errorf("failed to create directory: %v", err)
 	}
@@ -364,6 +389,11 @@ func (v *Vault) DuplicateNoteHandler(ctx context.Context, req *mcp.CallToolReque
 	}
 
 	fullPath := filepath.Join(v.path, path)
+
+	if !v.isPathSafe(fullPath) {
+		return nil, nil, fmt.Errorf("path must be within vault")
+	}
+
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read note: %v", err)
@@ -380,6 +410,9 @@ func (v *Vault) DuplicateNoteHandler(ctx context.Context, req *mcp.CallToolReque
 	}
 
 	outputFull := filepath.Join(v.path, output)
+	if !v.isPathSafe(outputFull) {
+		return nil, nil, fmt.Errorf("output path must be within vault")
+	}
 
 	// Check if output already exists
 	if _, err := os.Stat(outputFull); err == nil {

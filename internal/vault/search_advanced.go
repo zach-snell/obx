@@ -57,6 +57,10 @@ func (v *Vault) SearchAdvancedHandler(ctx context.Context, req *mcp.CallToolRequ
 		searchPath = filepath.Join(v.path, args.Directory)
 	}
 
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
+
 	terms := parseSearchTerms(args.Query)
 	if len(terms) == 0 {
 		return nil, nil, fmt.Errorf("empty search query")
@@ -178,9 +182,16 @@ func (v *Vault) SearchDateHandler(ctx context.Context, req *mcp.CallToolRequest,
 		searchPath = filepath.Join(v.path, args.Directory)
 	}
 
-	// Note: "created" date type falls back to modtime since Go's os.FileInfo
-	// does not expose creation time cross-platform. A future improvement could
-	// read creation dates from frontmatter.
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
+
+	// Note: "created" date type is not supported via os.FileInfo.
+	// We reject it to avoid silently falling back to modtime.
+	if args.DateType == "created" {
+		return nil, nil, fmt.Errorf("search by creation date is not yet supported")
+	}
+
 	var results []dateResult
 
 	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
@@ -251,6 +262,10 @@ func (v *Vault) SearchRegexHandler(ctx context.Context, req *mcp.CallToolRequest
 	searchPath := v.path
 	if dir != "" {
 		searchPath = filepath.Join(v.path, dir)
+	}
+
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
 	}
 
 	var results []SearchResult

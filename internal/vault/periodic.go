@@ -217,6 +217,10 @@ func (v *Vault) ListPeriodicNotesHandler(ctx context.Context, req *mcp.CallToolR
 
 	searchPath := filepath.Join(v.path, folder)
 
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
+
 	if _, err := os.Stat(searchPath); os.IsNotExist(err) {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
