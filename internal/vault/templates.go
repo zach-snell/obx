@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 var (
@@ -18,13 +18,20 @@ var (
 )
 
 // ListTemplatesHandler lists available templates
-func (v *Vault) ListTemplatesHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	folder := req.GetString("folder", "templates")
+func (v *Vault) ListTemplatesHandler(ctx context.Context, req *mcp.CallToolRequest, args ListTemplatesArgs) (*mcp.CallToolResult, any, error) {
+	folder := args.Folder
+	if folder == "" {
+		folder = "templates"
+	}
 
 	searchPath := filepath.Join(v.path, folder)
 
 	if _, err := os.Stat(searchPath); os.IsNotExist(err) {
-		return mcp.NewToolResultText(fmt.Sprintf("Templates folder not found: %s", folder)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Templates folder not found: %s", folder)},
+			},
+		}, nil, nil
 	}
 
 	var templates []string
@@ -41,11 +48,15 @@ func (v *Vault) ListTemplatesHandler(ctx context.Context, req mcp.CallToolReques
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to list templates: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to list templates: %v", err)
 	}
 
 	if len(templates) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No templates found in: %s", folder)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No templates found in: %s", folder)},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -54,17 +65,20 @@ func (v *Vault) ListTemplatesHandler(ctx context.Context, req mcp.CallToolReques
 		sb.WriteString(fmt.Sprintf("- %s\n", t))
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // GetTemplateHandler reads a template and shows its variables
-func (v *Vault) GetTemplateHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name, err := req.RequireString("name")
-	if err != nil {
-		return mcp.NewToolResultError("name is required"), nil
+func (v *Vault) GetTemplateHandler(ctx context.Context, req *mcp.CallToolRequest, args GetTemplateArgs) (*mcp.CallToolResult, any, error) {
+	name := args.Name
+	folder := args.Folder
+	if folder == "" {
+		folder = "templates"
 	}
-
-	folder := req.GetString("folder", "templates")
 
 	if !strings.HasSuffix(name, ".md") {
 		name += ".md"
@@ -73,15 +87,15 @@ func (v *Vault) GetTemplateHandler(ctx context.Context, req mcp.CallToolRequest)
 	templatePath := filepath.Join(v.path, folder, name)
 
 	if !v.isPathSafe(templatePath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	content, err := os.ReadFile(templatePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Template not found: %s", name)), nil
+			return nil, nil, fmt.Errorf("template not found: %s", name)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read template: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read template: %v", err)
 	}
 
 	// Extract variables
@@ -115,23 +129,22 @@ func (v *Vault) GetTemplateHandler(ctx context.Context, req mcp.CallToolRequest)
 	sb.WriteString(string(content))
 	sb.WriteString("\n```")
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // ApplyTemplateHandler creates a new note from a template
-func (v *Vault) ApplyTemplateHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	templateName, err := req.RequireString("template")
-	if err != nil {
-		return mcp.NewToolResultError("template name is required"), nil
+func (v *Vault) ApplyTemplateHandler(ctx context.Context, req *mcp.CallToolRequest, args ApplyTemplateArgs) (*mcp.CallToolResult, any, error) {
+	templateName := args.Template
+	targetPath := args.Path
+	templateFolder := args.TemplateFolder
+	if templateFolder == "" {
+		templateFolder = "templates"
 	}
-
-	targetPath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("target path is required"), nil
-	}
-
-	templateFolder := req.GetString("template_folder", "templates")
-	varsStr := req.GetString("variables", "")
+	varsStr := args.Variables
 
 	if !strings.HasSuffix(templateName, ".md") {
 		templateName += ".md"
@@ -143,25 +156,25 @@ func (v *Vault) ApplyTemplateHandler(ctx context.Context, req mcp.CallToolReques
 	// Read template
 	templatePath := filepath.Join(v.path, templateFolder, templateName)
 	if !v.isPathSafe(templatePath) {
-		return mcp.NewToolResultError("template path must be within vault"), nil
+		return nil, nil, fmt.Errorf("template path must be within vault")
 	}
 
 	templateContent, err := os.ReadFile(templatePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Template not found: %s", templateName)), nil
+			return nil, nil, fmt.Errorf("template not found: %s", templateName)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read template: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read template: %v", err)
 	}
 
 	// Check target doesn't exist
 	fullTargetPath := filepath.Join(v.path, targetPath)
 	if !v.isPathSafe(fullTargetPath) {
-		return mcp.NewToolResultError("target path must be within vault"), nil
+		return nil, nil, fmt.Errorf("target path must be within vault")
 	}
 
 	if _, err := os.Stat(fullTargetPath); err == nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Target note already exists: %s", targetPath)), nil
+		return nil, nil, fmt.Errorf("target note already exists: %s", targetPath)
 	}
 
 	// Parse variables from string (format: "key1=value1,key2=value2")
@@ -218,14 +231,18 @@ func (v *Vault) ApplyTemplateHandler(ctx context.Context, req mcp.CallToolReques
 	// Create target directory if needed
 	targetDir := filepath.Dir(fullTargetPath)
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create directory: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to create directory: %v", err)
 	}
 
 	// Write the new note
 	if err := os.WriteFile(fullTargetPath, []byte(result), 0o600); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to create note: %v", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Created note from template:\n- Template: %s\n- Target: %s\n\n%s",
-		templateName, targetPath, result)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Created note from template:\n- Template: %s\n- Target: %s\n\n%s",
+				templateName, targetPath, result)},
+		},
+	}, nil, nil
 }

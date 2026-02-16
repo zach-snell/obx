@@ -9,19 +9,26 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // WeeklyNoteHandler gets or creates a weekly note
-func (v *Vault) WeeklyNoteHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	dateStr := req.GetString("date", "")
-	folder := req.GetString("folder", "weekly")
-	format := req.GetString("format", "2006-W02") // ISO week format
-	createIfMissing := req.GetBool("create", true)
+func (v *Vault) WeeklyNoteHandler(ctx context.Context, req *mcp.CallToolRequest, args WeeklyNoteArgs) (*mcp.CallToolResult, any, error) {
+	dateStr := args.Date
+	folder := args.Folder
+	format := args.Format
+	createIfMissing := args.CreateIfMissing
+
+	if folder == "" {
+		folder = "weekly"
+	}
+	if format == "" {
+		format = "2006-W02"
+	}
 
 	targetDate, err := parseFlexibleDate(dateStr)
 	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
+		return nil, nil, err
 	}
 
 	// Get ISO week number
@@ -55,15 +62,22 @@ func (v *Vault) WeeklyNoteHandler(ctx context.Context, req mcp.CallToolRequest) 
 }
 
 // MonthlyNoteHandler gets or creates a monthly note
-func (v *Vault) MonthlyNoteHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	dateStr := req.GetString("date", "")
-	folder := req.GetString("folder", "monthly")
-	format := req.GetString("format", "2006-01") // YYYY-MM format
-	createIfMissing := req.GetBool("create", true)
+func (v *Vault) MonthlyNoteHandler(ctx context.Context, req *mcp.CallToolRequest, args MonthlyNoteArgs) (*mcp.CallToolResult, any, error) {
+	dateStr := args.Date
+	folder := args.Folder
+	format := args.Format
+	createIfMissing := args.CreateIfMissing
+
+	if folder == "" {
+		folder = "monthly"
+	}
+	if format == "" {
+		format = "2006-01"
+	}
 
 	targetDate, err := parseFlexibleDate(dateStr)
 	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
+		return nil, nil, err
 	}
 
 	// Normalize to first of month
@@ -90,14 +104,18 @@ func (v *Vault) MonthlyNoteHandler(ctx context.Context, req mcp.CallToolRequest)
 }
 
 // QuarterlyNoteHandler gets or creates a quarterly note
-func (v *Vault) QuarterlyNoteHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	dateStr := req.GetString("date", "")
-	folder := req.GetString("folder", "quarterly")
-	createIfMissing := req.GetBool("create", true)
+func (v *Vault) QuarterlyNoteHandler(ctx context.Context, req *mcp.CallToolRequest, args QuarterlyNoteArgs) (*mcp.CallToolResult, any, error) {
+	dateStr := args.Date
+	folder := args.Folder
+	createIfMissing := args.CreateIfMissing
+
+	if folder == "" {
+		folder = "quarterly"
+	}
 
 	targetDate, err := parseFlexibleDate(dateStr)
 	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
+		return nil, nil, err
 	}
 
 	quarter := (int(targetDate.Month())-1)/3 + 1
@@ -126,14 +144,18 @@ func (v *Vault) QuarterlyNoteHandler(ctx context.Context, req mcp.CallToolReques
 }
 
 // YearlyNoteHandler gets or creates a yearly note
-func (v *Vault) YearlyNoteHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	dateStr := req.GetString("date", "")
-	folder := req.GetString("folder", "yearly")
-	createIfMissing := req.GetBool("create", true)
+func (v *Vault) YearlyNoteHandler(ctx context.Context, req *mcp.CallToolRequest, args YearlyNoteArgs) (*mcp.CallToolResult, any, error) {
+	dateStr := args.Date
+	folder := args.Folder
+	createIfMissing := args.CreateIfMissing
+
+	if folder == "" {
+		folder = "yearly"
+	}
 
 	targetDate, err := parseFlexibleDate(dateStr)
 	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
+		return nil, nil, err
 	}
 
 	year := targetDate.Year()
@@ -162,9 +184,17 @@ func (v *Vault) YearlyNoteHandler(ctx context.Context, req mcp.CallToolRequest) 
 }
 
 // ListPeriodicNotesHandler lists periodic notes of a given type
-func (v *Vault) ListPeriodicNotesHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	noteType := req.GetString("type", "weekly")
-	limit := int(req.GetInt("limit", 20))
+func (v *Vault) ListPeriodicNotesHandler(ctx context.Context, req *mcp.CallToolRequest, args ListPeriodicArgs) (*mcp.CallToolResult, any, error) {
+	noteType := args.Type
+	limit := args.Limit
+	customFolder := args.Folder
+
+	if noteType == "" {
+		noteType = "weekly"
+	}
+	if limit <= 0 {
+		limit = 20
+	}
 
 	// Map type to default folder
 	folderMap := map[string]string{
@@ -177,18 +207,22 @@ func (v *Vault) ListPeriodicNotesHandler(ctx context.Context, req mcp.CallToolRe
 
 	folder, ok := folderMap[noteType]
 	if !ok {
-		return mcp.NewToolResultError(fmt.Sprintf("Unknown type: %s. Use: daily, weekly, monthly, quarterly, yearly", noteType)), nil
+		return nil, nil, fmt.Errorf("unknown type: %s. Use: daily, weekly, monthly, quarterly, yearly", noteType)
 	}
 
 	// Allow override
-	if customFolder := req.GetString("folder", ""); customFolder != "" {
+	if customFolder != "" {
 		folder = customFolder
 	}
 
 	searchPath := filepath.Join(v.path, folder)
 
 	if _, err := os.Stat(searchPath); os.IsNotExist(err) {
-		return mcp.NewToolResultText(fmt.Sprintf("No %s notes folder found: %s", noteType, folder)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No %s notes folder found: %s", noteType, folder)},
+			},
+		}, nil, nil
 	}
 
 	type noteInfo struct {
@@ -215,11 +249,15 @@ func (v *Vault) ListPeriodicNotesHandler(ctx context.Context, req mcp.CallToolRe
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to list notes: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to list notes: %v", err)
 	}
 
 	if len(notes) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No %s notes found in %s", noteType, folder)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No %s notes found in %s", noteType, folder)},
+			},
+		}, nil, nil
 	}
 
 	// Sort by name descending (most recent first for date-based names)
@@ -238,11 +276,15 @@ func (v *Vault) ListPeriodicNotesHandler(ctx context.Context, req mcp.CallToolRe
 		fmt.Fprintf(&sb, "- [[%s]] (%s)\n", n.name, n.modTime.Format("Jan 2"))
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // Helper: get or create a periodic note
-func (v *Vault) getOrCreatePeriodicNote(folder, filename string, create bool, templateFn func() string) (*mcp.CallToolResult, error) {
+func (v *Vault) getOrCreatePeriodicNote(folder, filename string, create bool, templateFn func() string) (*mcp.CallToolResult, any, error) {
 	var notePath string
 	if folder != "" {
 		notePath = filepath.Join(folder, filename)
@@ -253,35 +295,47 @@ func (v *Vault) getOrCreatePeriodicNote(folder, filename string, create bool, te
 	fullPath := filepath.Join(v.path, notePath)
 
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	// Check if exists
 	content, err := os.ReadFile(fullPath)
 	if err == nil {
-		return mcp.NewToolResultText(fmt.Sprintf("Path: %s\n\n%s", notePath, string(content))), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Path: %s\n\n%s", notePath, string(content))},
+			},
+		}, nil, nil
 	}
 
 	if !os.IsNotExist(err) {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	if !create {
-		return mcp.NewToolResultText(fmt.Sprintf("Note not found: %s", notePath)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Note not found: %s", notePath)},
+			},
+		}, nil, nil
 	}
 
 	// Create it
 	dir := filepath.Dir(fullPath)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create directory: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to create directory: %v", err)
 	}
 
 	template := templateFn()
 	if err := os.WriteFile(fullPath, []byte(template), 0o600); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to create note: %v", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Created: %s\n\n%s", notePath, template)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Created: %s\n\n%s", notePath, template)},
+		},
+	}, nil, nil
 }
 
 // Helper: parse flexible date input

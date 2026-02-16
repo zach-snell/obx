@@ -8,13 +8,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // ListFoldersHandler lists all folders in the vault
-func (v *Vault) ListFoldersHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	dir := req.GetString("directory", "")
-	includeEmpty := req.GetBool("include_empty", true)
+func (v *Vault) ListFoldersHandler(ctx context.Context, req *mcp.CallToolRequest, args ListDirsArgs) (*mcp.CallToolResult, any, error) {
+	dir := args.Directory
+	includeEmpty := args.IncludeEmpty
 
 	searchPath := v.path
 	if dir != "" {
@@ -58,7 +58,7 @@ func (v *Vault) ListFoldersHandler(ctx context.Context, req mcp.CallToolRequest)
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to list folders: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to list folders: %v", err)
 	}
 
 	// Filter and sort
@@ -74,7 +74,11 @@ func (v *Vault) ListFoldersHandler(ctx context.Context, req mcp.CallToolRequest)
 	})
 
 	if len(result) == 0 {
-		return mcp.NewToolResultText("No folders found"), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: "No folders found"},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -87,50 +91,51 @@ func (v *Vault) ListFoldersHandler(ctx context.Context, req mcp.CallToolRequest)
 		}
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // CreateFolderHandler creates a new folder
-func (v *Vault) CreateFolderHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	folderPath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
+func (v *Vault) CreateFolderHandler(ctx context.Context, req *mcp.CallToolRequest, args CreateDirArgs) (*mcp.CallToolResult, any, error) {
+	folderPath := args.Path
 
 	fullPath := filepath.Join(v.path, folderPath)
 
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	// Check if already exists
 	if info, err := os.Stat(fullPath); err == nil {
 		if info.IsDir() {
-			return mcp.NewToolResultText(fmt.Sprintf("Folder already exists: %s", folderPath)), nil
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: fmt.Sprintf("Folder already exists: %s", folderPath)},
+				},
+			}, nil, nil
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Path exists but is not a folder: %s", folderPath)), nil
+		return nil, nil, fmt.Errorf("path exists but is not a folder: %s", folderPath)
 	}
 
 	if err := os.MkdirAll(fullPath, 0o755); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create folder: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to create folder: %v", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Created folder: %s", folderPath)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Created folder: %s", folderPath)},
+		},
+	}, nil, nil
 }
 
 // MoveNoteHandler moves a note to a new location
-func (v *Vault) MoveNoteHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	sourcePath, err := req.RequireString("source")
-	if err != nil {
-		return mcp.NewToolResultError("source path is required"), nil
-	}
-
-	destPath, err := req.RequireString("destination")
-	if err != nil {
-		return mcp.NewToolResultError("destination path is required"), nil
-	}
-
-	updateLinks := req.GetBool("update_links", true)
+func (v *Vault) MoveNoteHandler(ctx context.Context, req *mcp.CallToolRequest, args MoveArgs) (*mcp.CallToolResult, any, error) {
+	sourcePath := args.Source
+	destPath := args.Destination
+	updateLinks := args.UpdateLinks
 
 	// Ensure .md extension
 	if !strings.HasSuffix(sourcePath, ".md") {
@@ -144,23 +149,23 @@ func (v *Vault) MoveNoteHandler(ctx context.Context, req mcp.CallToolRequest) (*
 	destFullPath := filepath.Join(v.path, destPath)
 
 	if !v.isPathSafe(sourceFullPath) || !v.isPathSafe(destFullPath) {
-		return mcp.NewToolResultError("paths must be within vault"), nil
+		return nil, nil, fmt.Errorf("paths must be within vault")
 	}
 
 	// Check source exists
 	if _, err := os.Stat(sourceFullPath); os.IsNotExist(err) {
-		return mcp.NewToolResultError(fmt.Sprintf("Source not found: %s", sourcePath)), nil
+		return nil, nil, fmt.Errorf("source not found: %s", sourcePath)
 	}
 
 	// Check destination doesn't exist
 	if _, err := os.Stat(destFullPath); err == nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Destination already exists: %s", destPath)), nil
+		return nil, nil, fmt.Errorf("destination already exists: %s", destPath)
 	}
 
 	// Create destination directory if needed
 	destDir := filepath.Dir(destFullPath)
 	if err := os.MkdirAll(destDir, 0o755); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create directory: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to create directory: %v", err)
 	}
 
 	var updatedFiles int
@@ -170,7 +175,7 @@ func (v *Vault) MoveNoteHandler(ctx context.Context, req mcp.CallToolRequest) (*
 
 	// Move the file
 	if err := os.Rename(sourceFullPath, destFullPath); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to move note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to move note: %v", err)
 	}
 
 	var result string
@@ -180,7 +185,11 @@ func (v *Vault) MoveNoteHandler(ctx context.Context, req mcp.CallToolRequest) (*
 		result = fmt.Sprintf("Moved %s → %s", sourcePath, destPath)
 	}
 
-	return mcp.NewToolResultText(result), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: result},
+		},
+	}, nil, nil
 }
 
 // updateLinksForMove updates wikilinks when a note is moved
@@ -229,48 +238,52 @@ func (v *Vault) updateLinksForMove(oldPath, newPath string) int {
 }
 
 // DeleteFolderHandler deletes an empty folder
-func (v *Vault) DeleteFolderHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	folderPath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
-
-	force := req.GetBool("force", false)
+func (v *Vault) DeleteFolderHandler(ctx context.Context, req *mcp.CallToolRequest, args DeleteDirArgs) (*mcp.CallToolResult, any, error) {
+	folderPath := args.Path
+	force := args.Force
 
 	fullPath := filepath.Join(v.path, folderPath)
 
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	info, err := os.Stat(fullPath)
 	if os.IsNotExist(err) {
-		return mcp.NewToolResultError(fmt.Sprintf("Folder not found: %s", folderPath)), nil
+		return nil, nil, fmt.Errorf("folder not found: %s", folderPath)
 	}
 	if !info.IsDir() {
-		return mcp.NewToolResultError(fmt.Sprintf("Not a folder: %s", folderPath)), nil
+		return nil, nil, fmt.Errorf("not a folder: %s", folderPath)
 	}
 
 	// Check if empty
 	entries, err := os.ReadDir(fullPath)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read folder: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read folder: %v", err)
 	}
 
 	if len(entries) > 0 && !force {
-		return mcp.NewToolResultError(fmt.Sprintf("Folder not empty: %s (use force=true to delete anyway)", folderPath)), nil
+		return nil, nil, fmt.Errorf("folder not empty: %s (use force=true to delete anyway)", folderPath)
 	}
 
 	if force {
 		if err := os.RemoveAll(fullPath); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to delete folder: %v", err)), nil
+			return nil, nil, fmt.Errorf("failed to delete folder: %v", err)
 		}
-		return mcp.NewToolResultText(fmt.Sprintf("Deleted folder and contents: %s", folderPath)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Deleted folder and contents: %s", folderPath)},
+			},
+		}, nil, nil
 	}
 
 	if err := os.Remove(fullPath); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to delete folder: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to delete folder: %v", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Deleted folder: %s", folderPath)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Deleted folder: %s", folderPath)},
+		},
+	}, nil, nil
 }

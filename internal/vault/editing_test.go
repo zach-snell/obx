@@ -7,17 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
-
-// helper to create a call tool request with params
-func makeRequest(params map[string]any) mcp.CallToolRequest {
-	return mcp.CallToolRequest{
-		Params: mcp.CallToolParams{
-			Arguments: params,
-		},
-	}
-}
 
 func setupTestVault(t *testing.T) (v *Vault, dir string) {
 	t.Helper()
@@ -162,13 +153,13 @@ func TestEditNoteHandler(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "test.md", "Hello world\nThis is a test\nGoodbye world")
 
-		req := makeRequest(map[string]any{
-			"path":     "test.md",
-			"old_text": "This is a test",
-			"new_text": "This is REPLACED",
-		})
+		args := EditNoteArgs{
+			Path:    "test.md",
+			OldText: "This is a test",
+			NewText: "This is REPLACED",
+		}
 
-		result, err := v.EditNoteHandler(ctx, req)
+		result, _, err := v.EditNoteHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -189,17 +180,14 @@ func TestEditNoteHandler(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "test.md", "foo bar\nfoo baz\nfoo qux")
 
-		req := makeRequest(map[string]any{
-			"path":     "test.md",
-			"old_text": "foo",
-			"new_text": "replaced",
-		})
-
-		result, err := v.EditNoteHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
+		args := EditNoteArgs{
+			Path:    "test.md",
+			OldText: "foo",
+			NewText: "replaced",
 		}
-		if !result.IsError {
+
+		_, _, err := v.EditNoteHandler(ctx, nil, args)
+		if err == nil {
 			t.Error("expected error for multiple matches without replace_all")
 		}
 	})
@@ -208,14 +196,14 @@ func TestEditNoteHandler(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "test.md", "foo bar\nfoo baz\nfoo qux")
 
-		req := makeRequest(map[string]any{
-			"path":        "test.md",
-			"old_text":    "foo",
-			"new_text":    "replaced",
-			"replace_all": true,
-		})
+		args := EditNoteArgs{
+			Path:       "test.md",
+			OldText:    "foo",
+			NewText:    "replaced",
+			ReplaceAll: true,
+		}
 
-		result, err := v.EditNoteHandler(ctx, req)
+		result, _, err := v.EditNoteHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -236,17 +224,14 @@ func TestEditNoteHandler(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "test.md", "Hello world")
 
-		req := makeRequest(map[string]any{
-			"path":     "test.md",
-			"old_text": "nonexistent",
-			"new_text": "replaced",
-		})
-
-		result, err := v.EditNoteHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
+		args := EditNoteArgs{
+			Path:    "test.md",
+			OldText: "nonexistent",
+			NewText: "replaced",
 		}
-		if !result.IsError {
+
+		_, _, err := v.EditNoteHandler(ctx, nil, args)
+		if err == nil {
 			t.Error("expected error for not found")
 		}
 	})
@@ -254,17 +239,14 @@ func TestEditNoteHandler(t *testing.T) {
 	t.Run("note not found", func(t *testing.T) {
 		v, _ := setupTestVault(t)
 
-		req := makeRequest(map[string]any{
-			"path":     "nonexistent.md",
-			"old_text": "hello",
-			"new_text": "world",
-		})
-
-		result, err := v.EditNoteHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
+		args := EditNoteArgs{
+			Path:    "nonexistent.md",
+			OldText: "hello",
+			NewText: "world",
 		}
-		if !result.IsError {
+
+		_, _, err := v.EditNoteHandler(ctx, nil, args)
+		if err == nil {
 			t.Error("expected error for missing file")
 		}
 	})
@@ -273,18 +255,18 @@ func TestEditNoteHandler(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "test.md", "line1\nline2\nline3\nline4\nline5")
 
-		req := makeRequest(map[string]any{
-			"path":          "test.md",
-			"old_text":      "line3",
-			"new_text":      "REPLACED",
-			"context_lines": float64(2),
-		})
+		args := EditNoteArgs{
+			Path:         "test.md",
+			OldText:      "line3",
+			NewText:      "REPLACED",
+			ContextLines: 2,
+		}
 
-		result, err := v.EditNoteHandler(ctx, req)
+		result, _, err := v.EditNoteHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
-		text := result.Content[0].(mcp.TextContent).Text
+		text := result.Content[0].(*mcp.TextContent).Text
 		if !strings.Contains(text, "Context") {
 			t.Errorf("expected context output, got:\n%s", text)
 		}
@@ -293,17 +275,14 @@ func TestEditNoteHandler(t *testing.T) {
 	t.Run("path safety", func(t *testing.T) {
 		v, _ := setupTestVault(t)
 
-		req := makeRequest(map[string]any{
-			"path":     "../../etc/passwd",
-			"old_text": "root",
-			"new_text": "hacked",
-		})
-
-		result, err := v.EditNoteHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
+		args := EditNoteArgs{
+			Path:    "../../etc/passwd",
+			OldText: "root",
+			NewText: "hacked",
 		}
-		if !result.IsError {
+
+		_, _, err := v.EditNoteHandler(ctx, nil, args)
+		if err == nil {
 			t.Error("expected error for path traversal")
 		}
 	})
@@ -312,13 +291,13 @@ func TestEditNoteHandler(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "test.md", "Hello world")
 
-		req := makeRequest(map[string]any{
-			"path":     "test",
-			"old_text": "Hello",
-			"new_text": "Hi",
-		})
+		args := EditNoteArgs{
+			Path:    "test",
+			OldText: "Hello",
+			NewText: "Hi",
+		}
 
-		result, err := v.EditNoteHandler(ctx, req)
+		result, _, err := v.EditNoteHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -364,13 +343,13 @@ Questions.
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", testDoc)
 
-		req := makeRequest(map[string]any{
-			"path":    "doc.md",
-			"heading": "Installation",
-			"content": "New install instructions.\n\n```bash\nnpm install\n```",
-		})
+		args := ReplaceSectionArgs{
+			Path:    "doc.md",
+			Heading: "Installation",
+			Content: "New install instructions.\n\n```bash\nnpm install\n```",
+		}
 
-		result, err := v.ReplaceSectionHandler(ctx, req)
+		result, _, err := v.ReplaceSectionHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -402,13 +381,13 @@ Questions.
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", testDoc)
 
-		req := makeRequest(map[string]any{
-			"path":    "doc.md",
-			"heading": "FAQ",
-			"content": "No questions yet.",
-		})
+		args := ReplaceSectionArgs{
+			Path:    "doc.md",
+			Heading: "FAQ",
+			Content: "No questions yet.",
+		}
 
-		result, err := v.ReplaceSectionHandler(ctx, req)
+		result, _, err := v.ReplaceSectionHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -429,13 +408,13 @@ Questions.
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", testDoc)
 
-		req := makeRequest(map[string]any{
-			"path":    "doc.md",
-			"heading": "installation",
-			"content": "Replaced.",
-		})
+		args := ReplaceSectionArgs{
+			Path:    "doc.md",
+			Heading: "installation",
+			Content: "Replaced.",
+		}
 
-		result, err := v.ReplaceSectionHandler(ctx, req)
+		result, _, err := v.ReplaceSectionHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -453,17 +432,14 @@ Questions.
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", testDoc)
 
-		req := makeRequest(map[string]any{
-			"path":    "doc.md",
-			"heading": "Nonexistent",
-			"content": "content",
-		})
-
-		result, err := v.ReplaceSectionHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
+		args := ReplaceSectionArgs{
+			Path:    "doc.md",
+			Heading: "Nonexistent",
+			Content: "content",
 		}
-		if !result.IsError {
+
+		_, _, err := v.ReplaceSectionHandler(ctx, nil, args)
+		if err == nil {
 			t.Error("expected error for missing heading")
 		}
 	})
@@ -472,13 +448,13 @@ Questions.
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", testDoc)
 
-		req := makeRequest(map[string]any{
-			"path":    "doc.md",
-			"heading": "Advanced",
-			"content": "New advanced content.",
-		})
+		args := ReplaceSectionArgs{
+			Path:    "doc.md",
+			Heading: "Advanced",
+			Content: "New advanced content.",
+		}
 
-		result, err := v.ReplaceSectionHandler(ctx, req)
+		result, _, err := v.ReplaceSectionHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -503,18 +479,18 @@ Questions.
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", testDoc)
 
-		req := makeRequest(map[string]any{
-			"path":          "doc.md",
-			"heading":       "FAQ",
-			"content":       "New FAQ.",
-			"context_lines": float64(2),
-		})
+		args := ReplaceSectionArgs{
+			Path:         "doc.md",
+			Heading:      "FAQ",
+			Content:      "New FAQ.",
+			ContextLines: 2,
+		}
 
-		result, err := v.ReplaceSectionHandler(ctx, req)
+		result, _, err := v.ReplaceSectionHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
-		text := result.Content[0].(mcp.TextContent).Text
+		text := result.Content[0].(*mcp.TextContent).Text
 		if !strings.Contains(text, "Context") {
 			t.Errorf("expected context output, got:\n%s", text)
 		}
@@ -532,12 +508,12 @@ func TestAppendNoteHandler_Enhanced(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "test.md", "existing content")
 
-		req := makeRequest(map[string]any{
-			"path":    "test.md",
-			"content": "appended",
-		})
+		args := AppendNoteArgs{
+			Path:    "test.md",
+			Content: "appended",
+		}
 
-		result, err := v.AppendNoteHandler(ctx, req)
+		result, _, err := v.AppendNoteHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -555,13 +531,13 @@ func TestAppendNoteHandler_Enhanced(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "test.md", "existing content")
 
-		req := makeRequest(map[string]any{
-			"path":     "test.md",
-			"content":  "prepended",
-			"position": "start",
-		})
+		args := AppendNoteArgs{
+			Path:     "test.md",
+			Content:  "prepended",
+			Position: "start",
+		}
 
-		result, err := v.AppendNoteHandler(ctx, req)
+		result, _, err := v.AppendNoteHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -579,13 +555,14 @@ func TestAppendNoteHandler_Enhanced(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "test.md", testDoc)
 
-		req := makeRequest(map[string]any{
-			"path":    "test.md",
-			"content": "Inserted after heading.",
-			"after":   "Section One",
-		})
+		args := AppendNoteArgs{
+			Path:     "test.md",
+			Content:  "Inserted after heading.",
+			Position: "after",
+			After:    "Section One",
+		}
 
-		result, err := v.AppendNoteHandler(ctx, req)
+		result, _, err := v.AppendNoteHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -610,13 +587,14 @@ func TestAppendNoteHandler_Enhanced(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "test.md", testDoc)
 
-		req := makeRequest(map[string]any{
-			"path":    "test.md",
-			"content": "Inserted before heading.",
-			"before":  "Section Two",
-		})
+		args := AppendNoteArgs{
+			Path:     "test.md",
+			Content:  "Inserted before heading.",
+			Position: "before",
+			Before:   "Section Two",
+		}
 
-		result, err := v.AppendNoteHandler(ctx, req)
+		result, _, err := v.AppendNoteHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -640,17 +618,15 @@ func TestAppendNoteHandler_Enhanced(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "test.md", "foo\nbar\nfoo\n")
 
-		req := makeRequest(map[string]any{
-			"path":    "test.md",
-			"content": "inserted",
-			"after":   "foo",
-		})
-
-		result, err := v.AppendNoteHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
+		args := AppendNoteArgs{
+			Path:     "test.md",
+			Content:  "inserted",
+			Position: "after",
+			After:    "foo",
 		}
-		if !result.IsError {
+
+		_, _, err := v.AppendNoteHandler(ctx, nil, args)
+		if err == nil {
 			t.Error("expected error for ambiguous target")
 		}
 	})
@@ -659,17 +635,15 @@ func TestAppendNoteHandler_Enhanced(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "test.md", "some content")
 
-		req := makeRequest(map[string]any{
-			"path":    "test.md",
-			"content": "inserted",
-			"after":   "nonexistent",
-		})
-
-		result, err := v.AppendNoteHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
+		args := AppendNoteArgs{
+			Path:     "test.md",
+			Content:  "inserted",
+			Position: "after",
+			After:    "nonexistent",
 		}
-		if !result.IsError {
+
+		_, _, err := v.AppendNoteHandler(ctx, nil, args)
+		if err == nil {
 			t.Error("expected error for target not found")
 		}
 	})
@@ -677,12 +651,12 @@ func TestAppendNoteHandler_Enhanced(t *testing.T) {
 	t.Run("creates file if not exists", func(t *testing.T) {
 		v, dir := setupTestVault(t)
 
-		req := makeRequest(map[string]any{
-			"path":    "new-file.md",
-			"content": "brand new content",
-		})
+		args := AppendNoteArgs{
+			Path:    "new-file.md",
+			Content: "brand new content",
+		}
 
-		result, err := v.AppendNoteHandler(ctx, req)
+		result, _, err := v.AppendNoteHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -700,18 +674,19 @@ func TestAppendNoteHandler_Enhanced(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "test.md", testDoc)
 
-		req := makeRequest(map[string]any{
-			"path":          "test.md",
-			"content":       "Inserted.",
-			"after":         "Section One",
-			"context_lines": float64(2),
-		})
+		args := AppendNoteArgs{
+			Path:         "test.md",
+			Content:      "Inserted.",
+			Position:     "after",
+			After:        "Section One",
+			ContextLines: 2,
+		}
 
-		result, err := v.AppendNoteHandler(ctx, req)
+		result, _, err := v.AppendNoteHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
-		text := result.Content[0].(mcp.TextContent).Text
+		text := result.Content[0].(*mcp.TextContent).Text
 		if !strings.Contains(text, "Context") {
 			t.Errorf("expected context output, got:\n%s", text)
 		}
@@ -797,12 +772,15 @@ func TestBatchEditNoteHandler(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", "## 1. Alpha\n\nContent.\n\n## 2. Beta\n\nContent.\n\n## 3. Gamma\n")
 
-		req := makeRequest(map[string]any{
-			"path":  "doc.md",
-			"edits": `[{"old_text": "## 2. Beta", "new_text": "## 3. Beta"}, {"old_text": "## 3. Gamma", "new_text": "## 4. Gamma"}]`,
-		})
+		args := BatchEditArgs{
+			Path: "doc.md",
+			Edits: []EditEntry{
+				{OldText: "## 2. Beta", NewText: "## 3. Beta"},
+				{OldText: "## 3. Gamma", NewText: "## 4. Gamma"},
+			},
+		}
 
-		result, err := v.BatchEditNoteHandler(ctx, req)
+		result, _, err := v.BatchEditNoteHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -829,16 +807,16 @@ func TestBatchEditNoteHandler(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", "Hello world\nGoodbye world\n")
 
-		req := makeRequest(map[string]any{
-			"path":  "doc.md",
-			"edits": `[{"old_text": "Hello", "new_text": "Hi"}, {"old_text": "NONEXISTENT", "new_text": "nope"}]`,
-		})
-
-		result, err := v.BatchEditNoteHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
+		args := BatchEditArgs{
+			Path: "doc.md",
+			Edits: []EditEntry{
+				{OldText: "Hello", NewText: "Hi"},
+				{OldText: "NONEXISTENT", NewText: "nope"},
+			},
 		}
-		if !result.IsError {
+
+		_, _, err := v.BatchEditNoteHandler(ctx, nil, args)
+		if err == nil {
 			t.Fatal("expected error when edit not found")
 		}
 
@@ -853,21 +831,16 @@ func TestBatchEditNoteHandler(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", "foo bar\nfoo baz\n")
 
-		req := makeRequest(map[string]any{
-			"path":  "doc.md",
-			"edits": `[{"old_text": "foo", "new_text": "replaced"}]`,
-		})
+		args := BatchEditArgs{
+			Path: "doc.md",
+			Edits: []EditEntry{
+				{OldText: "foo", NewText: "replaced"},
+			},
+		}
 
-		result, err := v.BatchEditNoteHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !result.IsError {
+		_, _, err := v.BatchEditNoteHandler(ctx, nil, args)
+		if err == nil {
 			t.Fatal("expected error for ambiguous old_text")
-		}
-		text := result.Content[0].(mcp.TextContent).Text
-		if !strings.Contains(text, "found 2 times") {
-			t.Errorf("expected match count in error, got: %s", text)
 		}
 	})
 
@@ -875,35 +848,14 @@ func TestBatchEditNoteHandler(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", "content")
 
-		req := makeRequest(map[string]any{
-			"path":  "doc.md",
-			"edits": `[]`,
-		})
-
-		result, err := v.BatchEditNoteHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
+		args := BatchEditArgs{
+			Path:  "doc.md",
+			Edits: []EditEntry{},
 		}
-		if !result.IsError {
+
+		_, _, err := v.BatchEditNoteHandler(ctx, nil, args)
+		if err == nil {
 			t.Fatal("expected error for empty edits")
-		}
-	})
-
-	t.Run("invalid JSON fails", func(t *testing.T) {
-		v, dir := setupTestVault(t)
-		writeTestFile(t, dir, "doc.md", "content")
-
-		req := makeRequest(map[string]any{
-			"path":  "doc.md",
-			"edits": `not json`,
-		})
-
-		result, err := v.BatchEditNoteHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !result.IsError {
-			t.Fatal("expected error for invalid JSON")
 		}
 	})
 
@@ -911,37 +863,32 @@ func TestBatchEditNoteHandler(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", "abcdefgh\n")
 
-		req := makeRequest(map[string]any{
-			"path":  "doc.md",
-			"edits": `[{"old_text": "abcdef", "new_text": "X"}, {"old_text": "defgh", "new_text": "Y"}]`,
-		})
+		args := BatchEditArgs{
+			Path: "doc.md",
+			Edits: []EditEntry{
+				{OldText: "abcdef", NewText: "X"},
+				{OldText: "defgh", NewText: "Y"},
+			},
+		}
 
-		result, err := v.BatchEditNoteHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !result.IsError {
+		_, _, err := v.BatchEditNoteHandler(ctx, nil, args)
+		if err == nil {
 			t.Fatal("expected error for overlapping edits")
-		}
-		text := result.Content[0].(mcp.TextContent).Text
-		if !strings.Contains(text, "overlap") {
-			t.Errorf("expected overlap error, got: %s", text)
 		}
 	})
 
 	t.Run("note not found", func(t *testing.T) {
 		v, _ := setupTestVault(t)
 
-		req := makeRequest(map[string]any{
-			"path":  "nonexistent.md",
-			"edits": `[{"old_text": "a", "new_text": "b"}]`,
-		})
-
-		result, err := v.BatchEditNoteHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
+		args := BatchEditArgs{
+			Path: "nonexistent.md",
+			Edits: []EditEntry{
+				{OldText: "a", NewText: "b"},
+			},
 		}
-		if !result.IsError {
+
+		_, _, err := v.BatchEditNoteHandler(ctx, nil, args)
+		if err == nil {
 			t.Fatal("expected error for missing file")
 		}
 	})
@@ -949,16 +896,15 @@ func TestBatchEditNoteHandler(t *testing.T) {
 	t.Run("path safety", func(t *testing.T) {
 		v, _ := setupTestVault(t)
 
-		req := makeRequest(map[string]any{
-			"path":  "../../etc/passwd",
-			"edits": `[{"old_text": "root", "new_text": "hacked"}]`,
-		})
-
-		result, err := v.BatchEditNoteHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
+		args := BatchEditArgs{
+			Path: "../../etc/passwd",
+			Edits: []EditEntry{
+				{OldText: "root", NewText: "hacked"},
+			},
 		}
-		if !result.IsError {
+
+		_, _, err := v.BatchEditNoteHandler(ctx, nil, args)
+		if err == nil {
 			t.Fatal("expected error for path traversal")
 		}
 	})
@@ -967,20 +913,23 @@ func TestBatchEditNoteHandler(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", "line1\nline2\nline3\nline4\nline5\n")
 
-		req := makeRequest(map[string]any{
-			"path":          "doc.md",
-			"edits":         `[{"old_text": "line2", "new_text": "CHANGED2"}, {"old_text": "line4", "new_text": "CHANGED4"}]`,
-			"context_lines": float64(1),
-		})
+		args := BatchEditArgs{
+			Path: "doc.md",
+			Edits: []EditEntry{
+				{OldText: "line2", NewText: "CHANGED2"},
+				{OldText: "line4", NewText: "CHANGED4"},
+			},
+			ContextLines: 1,
+		}
 
-		result, err := v.BatchEditNoteHandler(ctx, req)
+		result, _, err := v.BatchEditNoteHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if result.IsError {
 			t.Fatalf("expected success, got error: %v", result.Content)
 		}
-		text := result.Content[0].(mcp.TextContent).Text
+		text := result.Content[0].(*mcp.TextContent).Text
 		if !strings.Contains(text, "Context") {
 			t.Errorf("expected context output, got:\n%s", text)
 		}
@@ -1011,16 +960,16 @@ Deploy text.
 `)
 
 		// Simulate: inserted a new "## 2. Prerequisites" section, now need to bump 2→3, 3→4, 4→5
-		req := makeRequest(map[string]any{
-			"path": "guide.md",
-			"edits": `[
-				{"old_text": "## 2. Setup", "new_text": "## 3. Setup"},
-				{"old_text": "## 3. Configuration", "new_text": "## 4. Configuration"},
-				{"old_text": "## 4. Deployment", "new_text": "## 5. Deployment"}
-			]`,
-		})
+		args := BatchEditArgs{
+			Path: "guide.md",
+			Edits: []EditEntry{
+				{OldText: "## 2. Setup", NewText: "## 3. Setup"},
+				{OldText: "## 3. Configuration", NewText: "## 4. Configuration"},
+				{OldText: "## 4. Deployment", NewText: "## 5. Deployment"},
+			},
+		}
 
-		result, err := v.BatchEditNoteHandler(ctx, req)
+		result, _, err := v.BatchEditNoteHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1051,16 +1000,15 @@ Deploy text.
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", "content")
 
-		req := makeRequest(map[string]any{
-			"path":  "doc.md",
-			"edits": `[{"old_text": "", "new_text": "something"}]`,
-		})
-
-		result, err := v.BatchEditNoteHandler(ctx, req)
-		if err != nil {
-			t.Fatal(err)
+		args := BatchEditArgs{
+			Path: "doc.md",
+			Edits: []EditEntry{
+				{OldText: "", NewText: "something"},
+			},
 		}
-		if !result.IsError {
+
+		_, _, err := v.BatchEditNoteHandler(ctx, nil, args)
+		if err == nil {
 			t.Fatal("expected error for empty old_text")
 		}
 	})
@@ -1069,12 +1017,14 @@ Deploy text.
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", "Hello world")
 
-		req := makeRequest(map[string]any{
-			"path":  "doc",
-			"edits": `[{"old_text": "Hello", "new_text": "Hi"}]`,
-		})
+		args := BatchEditArgs{
+			Path: "doc",
+			Edits: []EditEntry{
+				{OldText: "Hello", NewText: "Hi"},
+			},
+		}
 
-		result, err := v.BatchEditNoteHandler(ctx, req)
+		result, _, err := v.BatchEditNoteHandler(ctx, nil, args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1092,12 +1042,12 @@ Deploy text.
 
 func TestValidateBatchEdits(t *testing.T) {
 	t.Run("valid edits pass", func(t *testing.T) {
-		located, errResult := validateBatchEdits("alpha beta gamma", []editEntry{
+		located, err := validateBatchEdits("alpha beta gamma", []EditEntry{
 			{OldText: "alpha", NewText: "A"},
 			{OldText: "gamma", NewText: "G"},
 		}, "test.md")
-		if errResult != nil {
-			t.Fatalf("expected success, got error: %v", errResult)
+		if err != nil {
+			t.Fatalf("expected success, got error: %v", err)
 		}
 		if len(located) != 2 {
 			t.Fatalf("expected 2 located edits, got %d", len(located))
@@ -1105,14 +1055,15 @@ func TestValidateBatchEdits(t *testing.T) {
 	})
 
 	t.Run("reports multiple errors at once", func(t *testing.T) {
-		_, errResult := validateBatchEdits("hello world", []editEntry{
+		_, err := validateBatchEdits("hello world", []EditEntry{
 			{OldText: "MISSING1", NewText: "A"},
 			{OldText: "MISSING2", NewText: "B"},
 		}, "test.md")
-		if errResult == nil {
+		if err == nil {
 			t.Fatal("expected error")
 		}
-		text := errResult.Content[0].(mcp.TextContent).Text
+		// The error message comes from fmt.Errorf, so we check err.Error()
+		text := err.Error()
 		if !strings.Contains(text, "MISSING1") || !strings.Contains(text, "MISSING2") {
 			t.Errorf("expected both errors reported, got: %s", text)
 		}

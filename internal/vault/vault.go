@@ -100,9 +100,32 @@ func (v *Vault) ListNotesHandler(ctx context.Context, req *mcp.CallToolRequest, 
 }
 
 // ReadNoteHandler reads a note's content
-func (v *Vault) ReadNoteHandler(ctx context.Context, req *mcp.CallToolRequest, args any) (*mcp.CallToolResult, any, error) {
-	// Stubbed for now as we are focusing on ListNotes and WriteNote
-	return nil, nil, fmt.Errorf("not implemented yet")
+func (v *Vault) ReadNoteHandler(ctx context.Context, req *mcp.CallToolRequest, args ReadNoteArgs) (*mcp.CallToolResult, any, error) {
+	path := args.Path
+	if !strings.HasSuffix(path, ".md") {
+		return nil, nil, fmt.Errorf("path must end with .md")
+	}
+
+	fullPath := filepath.Join(v.path, path)
+
+	// Security: ensure path is within vault
+	if !v.isPathSafe(fullPath) {
+		return nil, nil, fmt.Errorf("path must be within vault")
+	}
+
+	content, err := os.ReadFile(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil, fmt.Errorf("note not found: %s", path)
+		}
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: string(content)},
+		},
+	}, nil, nil
 }
 
 // WriteNoteHandler creates or updates a note
@@ -138,14 +161,30 @@ func (v *Vault) WriteNoteHandler(ctx context.Context, req *mcp.CallToolRequest, 
 	}, nil, nil
 }
 
-// The rest of the handlers are commented out for the PoC to avoid compilation errors
-// due to the SDK switch. In a full migration, they would all be updated.
-
-/*
 // DeleteNoteHandler deletes a note
-func (v *Vault) DeleteNoteHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// ... (content omitted)
-}
+func (v *Vault) DeleteNoteHandler(ctx context.Context, req *mcp.CallToolRequest, args DeleteNoteArgs) (*mcp.CallToolResult, any, error) {
+	path := args.Path
+	if !strings.HasSuffix(path, ".md") {
+		return nil, nil, fmt.Errorf("path must end with .md")
+	}
 
-// ... (other handlers)
-*/
+	fullPath := filepath.Join(v.path, path)
+
+	// Security: ensure path is within vault
+	if !v.isPathSafe(fullPath) {
+		return nil, nil, fmt.Errorf("path must be within vault")
+	}
+
+	if err := os.Remove(fullPath); err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil, fmt.Errorf("note not found: %s", path)
+		}
+		return nil, nil, fmt.Errorf("failed to delete note: %v", err)
+	}
+
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Successfully deleted: %s", path)},
+		},
+	}, nil, nil
+}

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // noteInfo holds metadata about a note for MOC/index generation
@@ -86,22 +86,25 @@ func (v *Vault) writeGeneratedFile(output, content, fileType string, noteCount i
 	}
 	fullPath := filepath.Join(v.path, output)
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create directory: %v", err)), nil
+		return nil, fmt.Errorf("failed to create directory: %v", err)
 	}
-	//#nosec G306 -- Obsidian notes need to be readable by the user
 	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write %s: %v", fileType, err)), nil
+		return nil, fmt.Errorf("failed to write %s: %v", fileType, err)
 	}
-	return mcp.NewToolResultText(fmt.Sprintf("Generated %s at %s with %d notes", fileType, output, noteCount)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Generated %s at %s with %d notes", fileType, output, noteCount)},
+		},
+	}, nil
 }
 
 // GenerateMOCHandler generates a new Map of Content from a directory
-func (v *Vault) GenerateMOCHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	dir := req.GetString("directory", "")
-	title := req.GetString("title", "")
-	output := req.GetString("output", "")
-	groupBy := req.GetString("group_by", "none") // none, tag, alpha
-	recursive := req.GetBool("recursive", false)
+func (v *Vault) GenerateMOCHandler(ctx context.Context, req *mcp.CallToolRequest, args GenerateMOCArgs) (*mcp.CallToolResult, any, error) {
+	dir := args.Directory
+	title := args.Title
+	output := args.Output
+	groupBy := args.GroupBy // none, tag, alpha
+	recursive := args.Recursive
 
 	if title == "" {
 		if dir != "" {
@@ -110,14 +113,21 @@ func (v *Vault) GenerateMOCHandler(ctx context.Context, req mcp.CallToolRequest)
 			title = "Vault MOC"
 		}
 	}
+	if groupBy == "" {
+		groupBy = "none"
+	}
 
 	notes, err := v.collectNotes(dir, recursive)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to collect notes: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to collect notes: %v", err)
 	}
 
 	if len(notes) == 0 {
-		return mcp.NewToolResultText("No notes found in directory"), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: "No notes found in directory"},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -135,10 +145,18 @@ func (v *Vault) GenerateMOCHandler(ctx context.Context, req mcp.CallToolRequest)
 	content := sb.String()
 
 	if output != "" {
-		return v.writeGeneratedFile(output, content, "MOC", len(notes))
+		res, err := v.writeGeneratedFile(output, content, "MOC", len(notes))
+		if err != nil {
+			return nil, nil, err
+		}
+		return res, nil, nil
 	}
 
-	return mcp.NewToolResultText(content), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: content},
+		},
+	}, nil, nil
 }
 
 // formatFlat creates a simple flat list of notes
@@ -162,6 +180,9 @@ func formatByAlpha(notes []noteInfo) string {
 
 	groups := make(map[rune][]noteInfo)
 	for _, n := range notes {
+		if len(n.title) == 0 {
+			continue
+		}
 		firstRune := unicode.ToUpper(rune(n.title[0]))
 		if !unicode.IsLetter(firstRune) {
 			firstRune = '#'
@@ -227,14 +248,10 @@ func formatByTag(notes []noteInfo) string {
 }
 
 // UpdateMOCHandler updates an existing MOC with new notes
-func (v *Vault) UpdateMOCHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	mocPath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
-
-	dir := req.GetString("directory", "")
-	recursive := req.GetBool("recursive", false)
+func (v *Vault) UpdateMOCHandler(ctx context.Context, req *mcp.CallToolRequest, args UpdateMOCArgs) (*mcp.CallToolResult, any, error) {
+	mocPath := args.Path
+	dir := args.Directory
+	recursive := args.Recursive
 
 	if !strings.HasSuffix(mocPath, ".md") {
 		mocPath += ".md"
@@ -243,7 +260,7 @@ func (v *Vault) UpdateMOCHandler(ctx context.Context, req mcp.CallToolRequest) (
 	fullPath := filepath.Join(v.path, mocPath)
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read MOC: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read MOC: %v", err)
 	}
 
 	existingLinks := ExtractWikilinks(string(content))
@@ -254,7 +271,7 @@ func (v *Vault) UpdateMOCHandler(ctx context.Context, req mcp.CallToolRequest) (
 
 	notes, err := v.collectNotes(dir, recursive)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to collect notes: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to collect notes: %v", err)
 	}
 
 	var newNotes []noteInfo
@@ -269,7 +286,11 @@ func (v *Vault) UpdateMOCHandler(ctx context.Context, req mcp.CallToolRequest) (
 	}
 
 	if len(newNotes) == 0 {
-		return mcp.NewToolResultText("MOC is up to date, no new notes found"), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: "MOC is up to date, no new notes found"},
+			},
+		}, nil, nil
 	}
 
 	sort.Slice(newNotes, func(i, j int) bool {
@@ -283,28 +304,39 @@ func (v *Vault) UpdateMOCHandler(ctx context.Context, req mcp.CallToolRequest) (
 	}
 
 	updatedContent := string(content) + sb.String()
-	//#nosec G306 -- Obsidian notes need to be readable by the user
 	if err := os.WriteFile(fullPath, []byte(updatedContent), 0o644); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to update MOC: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to update MOC: %v", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Added %d new notes to %s", len(newNotes), mocPath)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Added %d new notes to %s", len(newNotes), mocPath)},
+		},
+	}, nil, nil
 }
 
 // GenerateIndexHandler generates an alphabetical index of all notes
-func (v *Vault) GenerateIndexHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	dir := req.GetString("directory", "")
-	output := req.GetString("output", "")
-	title := req.GetString("title", "Index")
-	includeOrphans := req.GetBool("include_orphans", true)
+func (v *Vault) GenerateIndexHandler(ctx context.Context, req *mcp.CallToolRequest, args GenerateIndexArgs) (*mcp.CallToolResult, any, error) {
+	dir := args.Directory
+	output := args.Output
+	title := args.Title
+	includeOrphans := args.IncludeOrphans
+
+	if title == "" {
+		title = "Index"
+	}
 
 	notes, err := v.collectNotes(dir, true)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to collect notes: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to collect notes: %v", err)
 	}
 
 	if len(notes) == 0 {
-		return mcp.NewToolResultText("No notes found"), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: "No notes found"},
+			},
+		}, nil, nil
 	}
 
 	// Filter orphans if requested
@@ -326,8 +358,16 @@ func (v *Vault) GenerateIndexHandler(ctx context.Context, req mcp.CallToolReques
 	content := sb.String()
 
 	if output != "" {
-		return v.writeGeneratedFile(output, content, "index", len(notes))
+		res, err := v.writeGeneratedFile(output, content, "index", len(notes))
+		if err != nil {
+			return nil, nil, err
+		}
+		return res, nil, nil
 	}
 
-	return mcp.NewToolResultText(content), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: content},
+		},
+	}, nil, nil
 }

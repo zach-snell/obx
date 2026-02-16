@@ -9,11 +9,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // headingRegex matches markdown headings (# through ######)
-var headingRegex = regexp.MustCompile(`(?m)^(#{1,6})\s+(.+)$`)
+var headingRegexOld = regexp.MustCompile(`(?m)^(#{1,6})\s+(.+)$`)
 
 // Heading represents a markdown heading
 type Heading struct {
@@ -35,12 +35,12 @@ type NoteSummary struct {
 }
 
 // ReadNotesHandler reads multiple notes in one call
-func (v *Vault) ReadNotesHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	pathsRaw := req.GetString("paths", "")
-	includeFrontmatter := req.GetBool("include_frontmatter", true)
+func (v *Vault) ReadNotesHandler(ctx context.Context, req *mcp.CallToolRequest, args ReadNotesArgs) (*mcp.CallToolResult, any, error) {
+	pathsRaw := args.Paths
+	includeFrontmatter := args.IncludeFrontmatter
 
 	if pathsRaw == "" {
-		return mcp.NewToolResultError("paths is required (comma-separated or JSON array)"), nil
+		return nil, nil, fmt.Errorf("paths is required (comma-separated or JSON array)")
 	}
 
 	// Parse paths - support both comma-separated and JSON array
@@ -105,20 +105,23 @@ func (v *Vault) ReadNotesHandler(ctx context.Context, req mcp.CallToolRequest) (
 	}
 
 	if successCount == 0 {
-		return mcp.NewToolResultError("no notes could be read"), nil
+		return nil, nil, fmt.Errorf("no notes could be read")
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Read %d/%d notes:\n\n%s", successCount, len(paths), sb.String())), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Read %d/%d notes:\n\n%s", successCount, len(paths), sb.String())},
+		},
+	}, nil, nil
 }
 
 // GetNoteSummaryHandler returns a lightweight summary of a note
-func (v *Vault) GetNoteSummaryHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	notePath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
+func (v *Vault) GetNoteSummaryHandler(ctx context.Context, req *mcp.CallToolRequest, args GetNoteSummaryArgs) (*mcp.CallToolResult, any, error) {
+	notePath := args.Path
+	previewLines := args.Lines
+	if previewLines <= 0 {
+		previewLines = 5
 	}
-
-	previewLines := int(req.GetInt("lines", 5))
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
@@ -126,15 +129,15 @@ func (v *Vault) GetNoteSummaryHandler(ctx context.Context, req mcp.CallToolReque
 
 	fullPath := filepath.Join(v.path, notePath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Note not found: %s", notePath)), nil
+			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	contentStr := string(content)
@@ -188,20 +191,17 @@ func (v *Vault) GetNoteSummaryHandler(ctx context.Context, req mcp.CallToolReque
 	sb.WriteString("## Preview\n")
 	sb.WriteString(summary.Preview)
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // GetSectionHandler extracts a specific heading section from a note
-func (v *Vault) GetSectionHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	notePath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
-
-	heading, err := req.RequireString("heading")
-	if err != nil {
-		return mcp.NewToolResultError("heading is required"), nil
-	}
+func (v *Vault) GetSectionHandler(ctx context.Context, req *mcp.CallToolRequest, args GetSectionArgs) (*mcp.CallToolResult, any, error) {
+	notePath := args.Path
+	heading := args.Heading
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
@@ -209,33 +209,34 @@ func (v *Vault) GetSectionHandler(ctx context.Context, req mcp.CallToolRequest) 
 
 	fullPath := filepath.Join(v.path, notePath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Note not found: %s", notePath)), nil
+			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	body := RemoveFrontmatter(string(content))
 	section := extractSection(body, heading)
 
 	if section == "" {
-		return mcp.NewToolResultError(fmt.Sprintf("Section not found: %s", heading)), nil
+		return nil, nil, fmt.Errorf("section not found: %s", heading)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("## %s\n\n%s", heading, section)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("## %s\n\n%s", heading, section)},
+		},
+	}, nil, nil
 }
 
 // GetHeadingsHandler lists all headings in a note
-func (v *Vault) GetHeadingsHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	notePath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
+func (v *Vault) GetHeadingsHandler(ctx context.Context, req *mcp.CallToolRequest, args GetHeadingsArgs) (*mcp.CallToolResult, any, error) {
+	notePath := args.Path
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
@@ -243,22 +244,26 @@ func (v *Vault) GetHeadingsHandler(ctx context.Context, req mcp.CallToolRequest)
 
 	fullPath := filepath.Join(v.path, notePath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Note not found: %s", notePath)), nil
+			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	body := RemoveFrontmatter(string(content))
 	headings := extractHeadings(body)
 
 	if len(headings) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No headings found in: %s", notePath)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No headings found in: %s", notePath)},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -269,18 +274,18 @@ func (v *Vault) GetHeadingsHandler(ctx context.Context, req mcp.CallToolRequest)
 		fmt.Fprintf(&sb, "- L%d–%d: `%s %s`\n", h.Line, h.EndLine, prefix, h.Text)
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // SearchHeadingsHandler searches across all heading content
-func (v *Vault) SearchHeadingsHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	query, err := req.RequireString("query")
-	if err != nil {
-		return mcp.NewToolResultError("query is required"), nil
-	}
-
-	level := int(req.GetInt("level", 0)) // 0 means all levels
-	dir := req.GetString("directory", "")
+func (v *Vault) SearchHeadingsHandler(ctx context.Context, req *mcp.CallToolRequest, args SearchHeadingsArgs) (*mcp.CallToolResult, any, error) {
+	query := args.Query
+	level := args.Level
+	dir := args.Directory
 
 	searchPath := v.path
 	if dir != "" {
@@ -296,7 +301,7 @@ func (v *Vault) SearchHeadingsHandler(ctx context.Context, req mcp.CallToolReque
 
 	var matches []headingMatch
 
-	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
 			return nil
 		}
@@ -323,11 +328,15 @@ func (v *Vault) SearchHeadingsHandler(ctx context.Context, req mcp.CallToolReque
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Search failed: %v", err)), nil
+		return nil, nil, fmt.Errorf("search failed: %v", err)
 	}
 
 	if len(matches) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No headings matching '%s' found", query)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No headings matching '%s' found", query)},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -339,7 +348,11 @@ func (v *Vault) SearchHeadingsHandler(ctx context.Context, req mcp.CallToolReque
 		fmt.Fprintf(&sb, "- **%s** L%d: `%s %s`\n", m.path, m.heading.Line, prefix, m.heading.Text)
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // extractHeadings finds all headings in markdown content and computes section boundaries.
@@ -350,7 +363,7 @@ func extractHeadings(content string) []Heading {
 	totalLines := len(lines)
 
 	for i, line := range lines {
-		matches := headingRegex.FindStringSubmatch(line)
+		matches := headingRegexOld.FindStringSubmatch(line)
 		if matches != nil {
 			headings = append(headings, Heading{
 				Level: len(matches[1]),
@@ -384,7 +397,7 @@ func extractSection(content, heading string) string {
 	inSection := false
 
 	for i, line := range lines {
-		matches := headingRegex.FindStringSubmatch(line)
+		matches := headingRegexOld.FindStringSubmatch(line)
 		if matches != nil {
 			level := len(matches[1])
 			text := strings.TrimSpace(matches[2])

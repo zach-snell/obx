@@ -8,12 +8,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 var (
-	// Matches wikilinks: [[Note Name]] or [[path/to/note|Alias]]
-	wikilinkRegex = regexp.MustCompile(`\[\[([^\]|]+)(?:\|[^\]]+)?\]\]`)
 	// Matches H1 title: # Title
 	h1Regex = regexp.MustCompile(`(?m)^#\s+(.+)$`)
 )
@@ -24,21 +22,6 @@ type MOC struct {
 	Title       string   `json:"title"`
 	Tags        []string `json:"tags"`
 	LinkedNotes []string `json:"linkedNotes"`
-}
-
-// ExtractWikilinks extracts all wikilinks from content
-func ExtractWikilinks(content string) []string {
-	matches := wikilinkRegex.FindAllStringSubmatch(content, -1)
-	var links []string
-	seen := make(map[string]bool)
-	for _, match := range matches {
-		link := strings.TrimSpace(match[1])
-		if link != "" && !seen[link] {
-			links = append(links, link)
-			seen[link] = true
-		}
-	}
-	return links
 }
 
 // ExtractH1Title extracts the first H1 title from content
@@ -62,8 +45,8 @@ func IsMOC(content string) bool {
 }
 
 // DiscoverMOCsHandler discovers all MOCs in the vault
-func (v *Vault) DiscoverMOCsHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	dir := req.GetString("directory", "")
+func (v *Vault) DiscoverMOCsHandler(ctx context.Context, req *mcp.CallToolRequest, args DiscoverMOCsArgs) (*mcp.CallToolResult, any, error) {
+	dir := args.Directory
 
 	searchPath := v.path
 	if dir != "" {
@@ -107,11 +90,15 @@ func (v *Vault) DiscoverMOCsHandler(ctx context.Context, req mcp.CallToolRequest
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Discovery failed: %v", err)), nil
+		return nil, nil, fmt.Errorf("discovery failed: %v", err)
 	}
 
 	if len(mocs) == 0 {
-		return mcp.NewToolResultText("No MOCs found (notes with #moc tag)"), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: "No MOCs found (notes with #moc tag)"},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -127,5 +114,9 @@ func (v *Vault) DiscoverMOCsHandler(ctx context.Context, req mcp.CallToolRequest
 		sb.WriteString("\n")
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }

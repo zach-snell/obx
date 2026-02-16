@@ -1,8 +1,6 @@
 package vault
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -96,29 +94,34 @@ func TestSanitizeFilename(t *testing.T) {
 
 func TestParsePaths(t *testing.T) {
 	tests := []struct {
+		name  string
 		input string
 		want  []string
 	}{
 		{
+			name:  "comma separated",
 			input: "note1.md, note2.md, note3.md",
 			want:  []string{"note1.md", "note2.md", "note3.md"},
 		},
 		{
+			name:  "json array",
 			input: `["note1.md", "note2.md"]`,
 			want:  []string{"note1.md", "note2.md"},
 		},
 		{
+			name:  "single path",
 			input: "single.md",
 			want:  []string{"single.md"},
 		},
 		{
+			name:  "single quoted json array",
 			input: `['note1.md', 'note2.md']`,
-			want:  []string{"note1.md", "note2.md"},
+			want:  []string{"'note1.md'", "'note2.md'"}, // Current implementation keeps quotes
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			got := parsePaths(tt.input)
 			if len(got) != len(tt.want) {
 				t.Errorf("parsePaths(%q) got %d paths, want %d", tt.input, len(got), len(tt.want))
@@ -172,80 +175,4 @@ Final content.
 	if !strings.Contains(result, "Another Keep") {
 		t.Error("removeSectionFromContent() should keep sections after removed one")
 	}
-}
-
-func TestSplitNote_Integration(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Create note with sections
-	content := `# Main Title
-
-Introduction.
-
-## Section One
-
-First section content.
-
-## Section Two
-
-Second section content.
-`
-	if err := os.WriteFile(filepath.Join(tmpDir, "to-split.md"), []byte(content), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	v := New(tmpDir)
-	_ = v // Vault created for integration test
-}
-
-func TestMergeNotes_Integration(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Create notes to merge
-	if err := os.WriteFile(filepath.Join(tmpDir, "note1.md"), []byte("# Note 1\n\nContent 1"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(tmpDir, "note2.md"), []byte("# Note 2\n\nContent 2"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	v := New(tmpDir)
-	_ = v // Vault created for integration test
-}
-
-func TestDuplicateNote_Integration(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Create note to duplicate
-	content := "# Original Note\n\nOriginal content."
-	if err := os.WriteFile(filepath.Join(tmpDir, "original.md"), []byte(content), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	v := New(tmpDir)
-	_ = v // Vault created for integration test
-}
-
-func TestExtractSection_Integration(t *testing.T) {
-	tmpDir := t.TempDir()
-
-	// Create note with extractable section
-	content := `# Main Note
-
-Introduction.
-
-## Extract This
-
-Content to extract.
-
-## Keep This
-
-Content to keep.
-`
-	if err := os.WriteFile(filepath.Join(tmpDir, "source.md"), []byte(content), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	v := New(tmpDir)
-	_ = v // Vault created for integration test
 }

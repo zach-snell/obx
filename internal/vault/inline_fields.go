@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // InlineField represents a Dataview-style inline field
@@ -65,11 +65,8 @@ func ExtractInlineFields(content string) []InlineField {
 }
 
 // GetInlineFieldsHandler extracts inline fields from a note
-func (v *Vault) GetInlineFieldsHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	notePath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
+func (v *Vault) GetInlineFieldsHandler(ctx context.Context, req *mcp.CallToolRequest, args GetInlineFieldsArgs) (*mcp.CallToolResult, any, error) {
+	notePath := args.Path
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
@@ -77,21 +74,25 @@ func (v *Vault) GetInlineFieldsHandler(ctx context.Context, req mcp.CallToolRequ
 
 	fullPath := filepath.Join(v.path, notePath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Note not found: %s", notePath)), nil
+			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	fields := ExtractInlineFields(string(content))
 
 	if len(fields) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No inline fields found in: %s", notePath)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No inline fields found in: %s", notePath)},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -102,25 +103,18 @@ func (v *Vault) GetInlineFieldsHandler(ctx context.Context, req mcp.CallToolRequ
 		fmt.Fprintf(&sb, "- **%s**: %s (L%d)\n", f.Key, f.Value, f.Line)
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // SetInlineFieldHandler sets or updates an inline field in a note
-func (v *Vault) SetInlineFieldHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	notePath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
-
-	key, err := req.RequireString("key")
-	if err != nil {
-		return mcp.NewToolResultError("key is required"), nil
-	}
-
-	value, err := req.RequireString("value")
-	if err != nil {
-		return mcp.NewToolResultError("value is required"), nil
-	}
+func (v *Vault) SetInlineFieldHandler(ctx context.Context, req *mcp.CallToolRequest, args SetInlineFieldArgs) (*mcp.CallToolResult, any, error) {
+	notePath := args.Path
+	key := args.Key
+	value := args.Value
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
@@ -128,22 +122,22 @@ func (v *Vault) SetInlineFieldHandler(ctx context.Context, req mcp.CallToolReque
 
 	fullPath := filepath.Join(v.path, notePath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Note not found: %s", notePath)), nil
+			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	contentStr := string(content)
 	newContent, updated := setInlineField(contentStr, key, value)
 
 	if err := os.WriteFile(fullPath, []byte(newContent), 0o600); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to write note: %v", err)
 	}
 
 	action := "Set"
@@ -151,7 +145,11 @@ func (v *Vault) SetInlineFieldHandler(ctx context.Context, req mcp.CallToolReque
 		action = "Updated"
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("%s %s:: %s in %s", action, key, value, notePath)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("%s %s:: %s in %s", action, key, value, notePath)},
+		},
+	}, nil, nil
 }
 
 // inlineFieldQuery holds query parameters
@@ -230,26 +228,33 @@ func (v *Vault) searchInlineFields(dir string, query *inlineFieldQuery) ([]inlin
 }
 
 // QueryInlineFieldsHandler searches notes by inline field values
-func (v *Vault) QueryInlineFieldsHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	key, err := req.RequireString("key")
-	if err != nil {
-		return mcp.NewToolResultError("key is required"), nil
+func (v *Vault) QueryInlineFieldsHandler(ctx context.Context, req *mcp.CallToolRequest, args SearchInlineFieldsArgs) (*mcp.CallToolResult, any, error) {
+	key := args.Key
+	value := args.Value
+	operator := args.Operator
+	dir := args.Directory
+
+	if operator == "" {
+		operator = "contains"
 	}
 
 	query := &inlineFieldQuery{
 		key:      key,
-		value:    req.GetString("value", ""),
-		operator: req.GetString("operator", "contains"),
+		value:    value,
+		operator: operator,
 	}
-	dir := req.GetString("directory", "")
 
 	results, err := v.searchInlineFields(dir, query)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Query failed: %v", err)), nil
+		return nil, nil, fmt.Errorf("query failed: %v", err)
 	}
 
 	if len(results) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No notes found with inline field: %s", query.description())), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No notes found with inline field: %s", query.description())},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -265,7 +270,11 @@ func (v *Vault) QueryInlineFieldsHandler(ctx context.Context, req mcp.CallToolRe
 		sb.WriteString("\n")
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // setInlineField updates or appends an inline field

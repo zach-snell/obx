@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Canvas represents an Obsidian canvas file
@@ -53,8 +53,8 @@ type CanvasEdge struct {
 }
 
 // ListCanvasesHandler lists all canvas files in the vault
-func (v *Vault) ListCanvasesHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	dir := req.GetString("directory", "")
+func (v *Vault) ListCanvasesHandler(ctx context.Context, req *mcp.CallToolRequest, args ListDirsArgs) (*mcp.CallToolResult, any, error) {
+	dir := args.Directory
 
 	searchPath := v.path
 	if dir != "" {
@@ -75,11 +75,15 @@ func (v *Vault) ListCanvasesHandler(ctx context.Context, req mcp.CallToolRequest
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to list canvases: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to list canvases: %v", err)
 	}
 
 	if len(canvases) == 0 {
-		return mcp.NewToolResultText("No canvas files found"), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: "No canvas files found"},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -88,15 +92,16 @@ func (v *Vault) ListCanvasesHandler(ctx context.Context, req mcp.CallToolRequest
 		fmt.Fprintf(&sb, "- %s\n", c)
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // ReadCanvasHandler reads and parses a canvas file
-func (v *Vault) ReadCanvasHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	canvasPath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
+func (v *Vault) ReadCanvasHandler(ctx context.Context, req *mcp.CallToolRequest, args ReadNoteArgs) (*mcp.CallToolResult, any, error) {
+	canvasPath := args.Path
 
 	if !strings.HasSuffix(canvasPath, ".canvas") {
 		canvasPath += ".canvas"
@@ -104,23 +109,27 @@ func (v *Vault) ReadCanvasHandler(ctx context.Context, req mcp.CallToolRequest) 
 
 	fullPath := filepath.Join(v.path, canvasPath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Canvas not found: %s", canvasPath)), nil
+			return nil, nil, fmt.Errorf("canvas not found: %s", canvasPath)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read canvas: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read canvas: %v", err)
 	}
 
 	var canvas Canvas
 	if err := json.Unmarshal(content, &canvas); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Invalid canvas format: %v", err)), nil
+		return nil, nil, fmt.Errorf("invalid canvas format: %v", err)
 	}
 
-	return mcp.NewToolResultText(formatCanvas(canvasPath, &canvas)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: formatCanvas(canvasPath, &canvas)},
+		},
+	}, nil, nil
 }
 
 // formatCanvas formats a canvas as markdown
@@ -197,11 +206,9 @@ func formatCanvas(path string, canvas *Canvas) string {
 }
 
 // CreateCanvasHandler creates a new canvas file
-func (v *Vault) CreateCanvasHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	canvasPath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
+func (v *Vault) CreateCanvasHandler(ctx context.Context, req *mcp.CallToolRequest, args CreateCanvasArgs) (*mcp.CallToolResult, any, error) {
+	canvasPath := args.Path
+	content := args.Content
 
 	if !strings.HasSuffix(canvasPath, ".canvas") {
 		canvasPath += ".canvas"
@@ -209,51 +216,68 @@ func (v *Vault) CreateCanvasHandler(ctx context.Context, req mcp.CallToolRequest
 
 	fullPath := filepath.Join(v.path, canvasPath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	// Check if exists
 	if _, err := os.Stat(fullPath); err == nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Canvas already exists: %s", canvasPath)), nil
+		return nil, nil, fmt.Errorf("canvas already exists: %s", canvasPath)
 	}
 
-	// Create empty canvas
-	canvas := Canvas{
-		Nodes: []CanvasNode{},
-		Edges: []CanvasEdge{},
+	// Create empty canvas or use provided content
+	var canvas Canvas
+	if content != "" {
+		if err := json.Unmarshal([]byte(content), &canvas); err != nil {
+			return nil, nil, fmt.Errorf("invalid initial content: %v", err)
+		}
+	} else {
+		canvas = Canvas{
+			Nodes: []CanvasNode{},
+			Edges: []CanvasEdge{},
+		}
 	}
 
 	data, err := json.MarshalIndent(canvas, "", "  ")
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create canvas: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to create canvas: %v", err)
 	}
 
 	// Create directory if needed
 	dir := filepath.Dir(fullPath)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create directory: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to create directory: %v", err)
 	}
 
 	if err := os.WriteFile(fullPath, data, 0o600); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write canvas: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to write canvas: %v", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Created canvas: %s", canvasPath)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Created canvas: %s", canvasPath)},
+		},
+	}, nil, nil
 }
 
 // AddCanvasNodeHandler adds a node to a canvas
-func (v *Vault) AddCanvasNodeHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	canvasPath, err := req.RequireString("canvas")
-	if err != nil {
-		return mcp.NewToolResultError("canvas path is required"), nil
-	}
+func (v *Vault) AddCanvasNodeHandler(ctx context.Context, req *mcp.CallToolRequest, args AddNodeArgs) (*mcp.CallToolResult, any, error) {
+	canvasPath := args.Canvas
+	nodeType := args.Type
+	content := args.Content
+	x := args.X
+	y := args.Y
+	width := args.Width
+	height := args.Height
 
-	nodeType := req.GetString("type", "text")
-	content := req.GetString("content", "")
-	x := int(req.GetInt("x", 0))
-	y := int(req.GetInt("y", 0))
-	width := int(req.GetInt("width", 300))
-	height := int(req.GetInt("height", 200))
+	if nodeType == "" {
+		nodeType = "text"
+	}
+	if width <= 0 {
+		width = 300
+	}
+	if height <= 0 {
+		height = 200
+	}
 
 	if !strings.HasSuffix(canvasPath, ".canvas") {
 		canvasPath += ".canvas"
@@ -261,21 +285,21 @@ func (v *Vault) AddCanvasNodeHandler(ctx context.Context, req mcp.CallToolReques
 
 	fullPath := filepath.Join(v.path, canvasPath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	// Read existing canvas
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Canvas not found: %s", canvasPath)), nil
+			return nil, nil, fmt.Errorf("canvas not found: %s", canvasPath)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read canvas: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read canvas: %v", err)
 	}
 
 	var canvas Canvas
 	if err := json.Unmarshal(data, &canvas); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Invalid canvas format: %v", err)), nil
+		return nil, nil, fmt.Errorf("invalid canvas format: %v", err)
 	}
 
 	// Generate unique ID
@@ -301,7 +325,7 @@ func (v *Vault) AddCanvasNodeHandler(ctx context.Context, req mcp.CallToolReques
 	case "group":
 		node.Label = content
 	default:
-		return mcp.NewToolResultError(fmt.Sprintf("Unknown node type: %s (use: text, file, link, group)", nodeType)), nil
+		return nil, nil, fmt.Errorf("unknown node type: %s (use: text, file, link, group)", nodeType)
 	}
 
 	canvas.Nodes = append(canvas.Nodes, node)
@@ -309,34 +333,26 @@ func (v *Vault) AddCanvasNodeHandler(ctx context.Context, req mcp.CallToolReques
 	// Write back
 	newData, err := json.MarshalIndent(canvas, "", "  ")
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to serialize canvas: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to serialize canvas: %v", err)
 	}
 
 	if err := os.WriteFile(fullPath, newData, 0o600); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write canvas: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to write canvas: %v", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Added %s node `%s` to canvas", nodeType, nodeID)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Added %s node `%s` to canvas", nodeType, nodeID)},
+		},
+	}, nil, nil
 }
 
 // AddCanvasEdgeHandler adds an edge between nodes in a canvas
-func (v *Vault) AddCanvasEdgeHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	canvasPath, err := req.RequireString("canvas")
-	if err != nil {
-		return mcp.NewToolResultError("canvas path is required"), nil
-	}
-
-	fromNode, err := req.RequireString("from")
-	if err != nil {
-		return mcp.NewToolResultError("from node ID is required"), nil
-	}
-
-	toNode, err := req.RequireString("to")
-	if err != nil {
-		return mcp.NewToolResultError("to node ID is required"), nil
-	}
-
-	label := req.GetString("label", "")
+func (v *Vault) AddCanvasEdgeHandler(ctx context.Context, req *mcp.CallToolRequest, args ConnectNodesArgs) (*mcp.CallToolResult, any, error) {
+	canvasPath := args.Canvas
+	fromNode := args.From
+	toNode := args.To
+	label := args.Label
 
 	if !strings.HasSuffix(canvasPath, ".canvas") {
 		canvasPath += ".canvas"
@@ -344,21 +360,21 @@ func (v *Vault) AddCanvasEdgeHandler(ctx context.Context, req mcp.CallToolReques
 
 	fullPath := filepath.Join(v.path, canvasPath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	// Read existing canvas
 	data, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Canvas not found: %s", canvasPath)), nil
+			return nil, nil, fmt.Errorf("canvas not found: %s", canvasPath)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read canvas: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read canvas: %v", err)
 	}
 
 	var canvas Canvas
 	if err := json.Unmarshal(data, &canvas); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Invalid canvas format: %v", err)), nil
+		return nil, nil, fmt.Errorf("invalid canvas format: %v", err)
 	}
 
 	// Verify nodes exist
@@ -372,10 +388,10 @@ func (v *Vault) AddCanvasEdgeHandler(ctx context.Context, req mcp.CallToolReques
 	}
 
 	if !nodeExists(fromNode) {
-		return mcp.NewToolResultError(fmt.Sprintf("From node not found: %s", fromNode)), nil
+		return nil, nil, fmt.Errorf("from node not found: %s", fromNode)
 	}
 	if !nodeExists(toNode) {
-		return mcp.NewToolResultError(fmt.Sprintf("To node not found: %s", toNode)), nil
+		return nil, nil, fmt.Errorf("to node not found: %s", toNode)
 	}
 
 	// Generate edge ID
@@ -393,12 +409,16 @@ func (v *Vault) AddCanvasEdgeHandler(ctx context.Context, req mcp.CallToolReques
 	// Write back
 	newData, err := json.MarshalIndent(canvas, "", "  ")
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to serialize canvas: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to serialize canvas: %v", err)
 	}
 
 	if err := os.WriteFile(fullPath, newData, 0o600); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write canvas: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to write canvas: %v", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Added edge `%s`: %s → %s", edgeID, fromNode, toNode)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Added edge `%s`: %s → %s", edgeID, fromNode, toNode)},
+		},
+	}, nil, nil
 }

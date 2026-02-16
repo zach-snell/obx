@@ -2,12 +2,13 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // hasFrontmatter checks if content has YAML frontmatter
@@ -16,25 +17,21 @@ func hasFrontmatter(content string) bool {
 }
 
 // BulkTagHandler adds or removes tags from multiple notes
-func (v *Vault) BulkTagHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	pathsStr, err := req.RequireString("paths")
-	if err != nil {
-		return mcp.NewToolResultError("paths is required"), nil
-	}
+func (v *Vault) BulkTagHandler(ctx context.Context, req *mcp.CallToolRequest, args BulkTagArgs) (*mcp.CallToolResult, any, error) {
+	pathsStr := args.Paths
+	tag := args.Tag
+	action := args.Action // add, remove
 
-	tag, err := req.RequireString("tag")
-	if err != nil {
-		return mcp.NewToolResultError("tag is required"), nil
+	if action == "" {
+		action = "add"
 	}
-
-	action := req.GetString("action", "add") // add, remove
 
 	// Normalize tag (remove # prefix if present)
 	tag = strings.TrimPrefix(tag, "#")
 
 	paths := parsePaths(pathsStr)
 	if len(paths) == 0 {
-		return mcp.NewToolResultError("at least one path is required"), nil
+		return nil, nil, fmt.Errorf("at least one path is required")
 	}
 
 	var results []string
@@ -66,8 +63,7 @@ func (v *Vault) BulkTagHandler(ctx context.Context, req mcp.CallToolRequest) (*m
 			continue
 		}
 
-		//#nosec G306 -- Obsidian notes need to be readable by the user
-		if err := os.WriteFile(fullPath, []byte(contentStr), 0o644); err != nil {
+		if err := os.WriteFile(fullPath, []byte(contentStr), 0o600); err != nil {
 			errors = append(errors, fmt.Sprintf("%s: write failed", p))
 			continue
 		}
@@ -96,7 +92,11 @@ func (v *Vault) BulkTagHandler(ctx context.Context, req mcp.CallToolRequest) (*m
 		}
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // addTagToNote adds a tag to a note's content
@@ -214,28 +214,20 @@ func addFrontmatterField(content, key, value string) string {
 }
 
 // BulkMoveHandler moves multiple notes to a folder
-func (v *Vault) BulkMoveHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	pathsStr, err := req.RequireString("paths")
-	if err != nil {
-		return mcp.NewToolResultError("paths is required"), nil
-	}
-
-	destination, err := req.RequireString("destination")
-	if err != nil {
-		return mcp.NewToolResultError("destination folder is required"), nil
-	}
-
-	updateLinks := req.GetBool("update_links", true)
+func (v *Vault) BulkMoveHandler(ctx context.Context, req *mcp.CallToolRequest, args BulkMoveArgs) (*mcp.CallToolResult, any, error) {
+	pathsStr := args.Paths
+	destination := args.Destination
+	updateLinks := args.UpdateLinks
 
 	paths := parsePaths(pathsStr)
 	if len(paths) == 0 {
-		return mcp.NewToolResultError("at least one path is required"), nil
+		return nil, nil, fmt.Errorf("at least one path is required")
 	}
 
 	// Ensure destination exists
 	destFull := filepath.Join(v.path, destination)
 	if err := os.MkdirAll(destFull, 0o755); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create destination: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to create destination: %v", err)
 	}
 
 	var results []string
@@ -272,7 +264,7 @@ func (v *Vault) BulkMoveHandler(ctx context.Context, req mcp.CallToolRequest) (*
 		// Update links if requested
 		if updateLinks {
 			oldName := strings.TrimSuffix(filename, ".md")
-			_ = v.updateLinksInVault(oldName, oldName) // Links stay the same, just path changed
+			_ = v.updateLinksInVault(oldName, oldName)
 		}
 
 		results = append(results, fmt.Sprintf("%s -> %s", p, newRelPath))
@@ -295,29 +287,22 @@ func (v *Vault) BulkMoveHandler(ctx context.Context, req mcp.CallToolRequest) (*
 		}
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // BulkSetFrontmatterHandler sets a frontmatter property on multiple notes
-func (v *Vault) BulkSetFrontmatterHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	pathsStr, err := req.RequireString("paths")
-	if err != nil {
-		return mcp.NewToolResultError("paths is required"), nil
-	}
-
-	key, err := req.RequireString("key")
-	if err != nil {
-		return mcp.NewToolResultError("key is required"), nil
-	}
-
-	value, err := req.RequireString("value")
-	if err != nil {
-		return mcp.NewToolResultError("value is required"), nil
-	}
+func (v *Vault) BulkSetFrontmatterHandler(ctx context.Context, req *mcp.CallToolRequest, args BulkSetFrontmatterArgs) (*mcp.CallToolResult, any, error) {
+	pathsStr := args.Paths
+	key := args.Key
+	value := args.Value
 
 	paths := parsePaths(pathsStr)
 	if len(paths) == 0 {
-		return mcp.NewToolResultError("at least one path is required"), nil
+		return nil, nil, fmt.Errorf("at least one path is required")
 	}
 
 	var results []string
@@ -338,8 +323,7 @@ func (v *Vault) BulkSetFrontmatterHandler(ctx context.Context, req mcp.CallToolR
 		contentStr := string(content)
 		newContent := setFrontmatterKey(contentStr, key, value)
 
-		//#nosec G306 -- Obsidian notes need to be readable by the user
-		if err := os.WriteFile(fullPath, []byte(newContent), 0o644); err != nil {
+		if err := os.WriteFile(fullPath, []byte(newContent), 0o600); err != nil {
 			errors = append(errors, fmt.Sprintf("%s: write failed", p))
 			continue
 		}
@@ -364,47 +348,31 @@ func (v *Vault) BulkSetFrontmatterHandler(ctx context.Context, req mcp.CallToolR
 		}
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
-// updateLinksInVault updates wikilinks from oldName to newName across the vault
-func (v *Vault) updateLinksInVault(oldName, newName string) error {
-	return filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return nil
-		}
-
-		contentStr := string(content)
-		newContent := updateWikilinks(contentStr, oldName, newName)
-
-		if newContent != contentStr {
-			//#nosec G306 -- Obsidian notes need to be readable by the user
-			_ = os.WriteFile(path, []byte(newContent), 0o644)
-		}
-
-		return nil
-	})
-}
-
-// updateWikilinks replaces wikilinks from oldName to newName
-func updateWikilinks(content, oldName, newName string) string {
-	// Handle [[oldName]] and [[oldName|alias]]
-	patterns := []struct {
-		old string
-		new string
-	}{
-		{"[[" + oldName + "]]", "[[" + newName + "]]"},
-		{"[[" + oldName + "|", "[[" + newName + "|"},
+// parsePaths parses comma-separated list or JSON array of paths
+func parsePaths(pathsStr string) []string {
+	// Try parsing as JSON array first
+	var paths []string
+	if err := json.Unmarshal([]byte(pathsStr), &paths); err == nil {
+		return paths
 	}
 
-	for _, p := range patterns {
-		content = strings.ReplaceAll(content, p.old, p.new)
+	// Fallback to comma-separated string
+	// Handle potential brackets if it looked like an array but wasn't valid JSON
+	cleaned := strings.Trim(pathsStr, "[]")
+	parts := strings.Split(cleaned, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		trimmed := strings.TrimSpace(p)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
 	}
-
-	return content
+	return result
 }
