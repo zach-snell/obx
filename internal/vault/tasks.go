@@ -77,72 +77,44 @@ func ParseTask(line string, lineNum int) *Task {
 	return task
 }
 
-// ListTasksHandler lists all tasks across the vault
-func (v *Vault) ListTasksHandler(ctx context.Context, req *mcp.CallToolRequest, args ListTasksArgs) (*mcp.CallToolResult, any, error) {
-	status := args.Status
-	dir := args.Directory
-
-	if status == "" {
-		status = "all"
+// taskMatchesStatus returns whether a task should be included given the status filter.
+func taskMatchesStatus(task *Task, status string) bool {
+	switch status {
+	case "open":
+		return !task.Completed
+	case "completed":
+		return task.Completed
+	default: // "all"
+		return true
 	}
+}
 
-	searchPath := v.path
-	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
-	}
-
+// collectTasks walks a directory and collects tasks matching the given status filter.
+func (v *Vault) collectTasks(searchPath, status string) ([]Task, error) {
 	var tasks []Task
 
 	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
+		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
 			return nil
 		}
-		if info.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return nil
 		}
-
-		lines := strings.Split(string(content), "\n")
 		relPath, _ := filepath.Rel(v.path, path)
-
-		for i, line := range lines {
-			if task := ParseTask(line, i+1); task != nil {
+		for i, line := range strings.Split(string(content), "\n") {
+			if task := ParseTask(line, i+1); task != nil && taskMatchesStatus(task, status) {
 				task.File = relPath
-
-				// Filter by status
-				switch status {
-				case "open":
-					if task.Completed {
-						continue
-					}
-				case "completed":
-					if !task.Completed {
-						continue
-					}
-				}
-
 				tasks = append(tasks, *task)
 			}
 		}
 		return nil
 	})
+	return tasks, err
+}
 
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to list tasks: %v", err)
-	}
-
-	if len(tasks) == 0 {
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: "No tasks found"},
-			},
-		}, nil, nil
-	}
-
+// formatTasks formats a slice of tasks grouped by file.
+func formatTasks(tasks []Task) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Found %d tasks:\n\n", len(tasks)))
 
@@ -162,7 +134,6 @@ func (v *Vault) ListTasksHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		}
 
 		sb.WriteString(fmt.Sprintf("  L%d: - %s %s", t.Line, checkbox, t.Text))
-
 		if t.Priority != nil {
 			sb.WriteString(fmt.Sprintf(" [%s]", *t.Priority))
 		}
@@ -171,10 +142,37 @@ func (v *Vault) ListTasksHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		}
 		sb.WriteString("\n")
 	}
+	return sb.String()
+}
+
+// ListTasksHandler lists all tasks across the vault
+func (v *Vault) ListTasksHandler(ctx context.Context, req *mcp.CallToolRequest, args ListTasksArgs) (*mcp.CallToolResult, any, error) {
+	status := args.Status
+	if status == "" {
+		status = "all"
+	}
+
+	searchPath := v.path
+	if args.Directory != "" {
+		searchPath = filepath.Join(v.path, args.Directory)
+	}
+
+	tasks, err := v.collectTasks(searchPath, status)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to list tasks: %v", err)
+	}
+
+	if len(tasks) == 0 {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: "No tasks found"},
+			},
+		}, nil, nil
+	}
 
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
-			&mcp.TextContent{Text: sb.String()},
+			&mcp.TextContent{Text: formatTasks(tasks)},
 		},
 	}, nil, nil
 }

@@ -88,7 +88,7 @@ func (v *Vault) writeGeneratedFile(output, content, fileType string, noteCount i
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create directory: %v", err)
 	}
-	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(fullPath, []byte(content), 0o600); err != nil {
 		return nil, fmt.Errorf("failed to write %s: %v", fileType, err)
 	}
 	return &mcp.CallToolResult{
@@ -180,7 +180,7 @@ func formatByAlpha(notes []noteInfo) string {
 
 	groups := make(map[rune][]noteInfo)
 	for _, n := range notes {
-		if len(n.title) == 0 {
+		if n.title == "" {
 			continue
 		}
 		firstRune := unicode.ToUpper(rune(n.title[0]))
@@ -304,7 +304,7 @@ func (v *Vault) UpdateMOCHandler(ctx context.Context, req *mcp.CallToolRequest, 
 	}
 
 	updatedContent := string(content) + sb.String()
-	if err := os.WriteFile(fullPath, []byte(updatedContent), 0o644); err != nil {
+	if err := os.WriteFile(fullPath, []byte(updatedContent), 0o600); err != nil {
 		return nil, nil, fmt.Errorf("failed to update MOC: %v", err)
 	}
 

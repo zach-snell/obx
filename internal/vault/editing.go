@@ -363,24 +363,7 @@ func (v *Vault) AppendNoteHandler(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	// Construct new content
-	var finalLines []string
-	if insertMode == "append" {
-		// Ensure newline before append if file is not empty
-		if len(lines) > 0 && lines[len(lines)-1] != "" {
-			finalLines = append(lines, "")
-		} else {
-			finalLines = lines
-		}
-		finalLines = append(finalLines, newLines...)
-	} else {
-		// Insert at index
-		if insertIndex > len(lines) {
-			insertIndex = len(lines)
-		}
-		finalLines = append(finalLines, lines[:insertIndex]...)
-		finalLines = append(finalLines, newLines...)
-		finalLines = append(finalLines, lines[insertIndex:]...)
-	}
+	finalLines := buildFinalLines(lines, newLines, insertIndex, insertMode)
 
 	finalContent := strings.Join(finalLines, "\n")
 	if err := os.WriteFile(fullPath, []byte(finalContent), 0o600); err != nil {
@@ -410,6 +393,32 @@ func (v *Vault) AppendNoteHandler(ctx context.Context, req *mcp.CallToolRequest,
 			&mcp.TextContent{Text: sb.String()},
 		},
 	}, nil, nil
+}
+
+// buildFinalLines constructs the final line slice for an append/insert operation.
+func buildFinalLines(lines, newLines []string, insertIndex int, insertMode string) []string {
+	if insertMode == "append" {
+		var base []string
+		if len(lines) > 0 && lines[len(lines)-1] != "" {
+			base = make([]string, len(lines), len(lines)+1+len(newLines))
+			copy(base, lines)
+			base = append(base, "")
+		} else {
+			base = make([]string, len(lines), len(lines)+len(newLines))
+			copy(base, lines)
+		}
+		return append(base, newLines...)
+	}
+
+	// Insert at index
+	if insertIndex > len(lines) {
+		insertIndex = len(lines)
+	}
+	result := make([]string, 0, len(lines)+len(newLines))
+	result = append(result, lines[:insertIndex]...)
+	result = append(result, newLines...)
+	result = append(result, lines[insertIndex:]...)
+	return result
 }
 
 // findTargetLine finds the line index matching the target string (heading or text)

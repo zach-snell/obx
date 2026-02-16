@@ -13,12 +13,33 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// matchNoteByScope checks whether a note matches the search terms within the given scope.
+func matchNoteByScope(searchIn, relPath, contentStr string, terms []string, operator string) (matched bool, matchLine int, matchContent string) {
+	switch searchIn {
+	case "file":
+		if matchTerms(relPath, terms, operator) {
+			return true, 0, relPath
+		}
+	case "heading":
+		for _, h := range extractHeadings(contentStr) {
+			if matchTerms(h.Text, terms, operator) {
+				return true, h.Line, h.Text
+			}
+		}
+	default: // content
+		for i, line := range strings.Split(contentStr, "\n") {
+			if matchTerms(line, terms, operator) {
+				return true, i + 1, strings.TrimSpace(line)
+			}
+		}
+	}
+	return false, 0, ""
+}
+
 // SearchAdvancedHandler performs advanced search with operators and scope
 func (v *Vault) SearchAdvancedHandler(ctx context.Context, req *mcp.CallToolRequest, args SearchAdvancedArgs) (*mcp.CallToolResult, any, error) {
-	query := args.Query
 	searchIn := args.SearchIn
 	operator := args.Operator
-	dir := args.Directory
 	limit := args.Limit
 
 	if searchIn == "" {
@@ -32,12 +53,11 @@ func (v *Vault) SearchAdvancedHandler(ctx context.Context, req *mcp.CallToolRequ
 	}
 
 	searchPath := v.path
-	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+	if args.Directory != "" {
+		searchPath = filepath.Join(v.path, args.Directory)
 	}
 
-	// Parse query terms
-	terms := parseSearchTerms(query)
+	terms := parseSearchTerms(args.Query)
 	if len(terms) == 0 {
 		return nil, nil, fmt.Errorf("empty search query")
 	}
@@ -54,48 +74,9 @@ func (v *Vault) SearchAdvancedHandler(ctx context.Context, req *mcp.CallToolRequ
 			return nil
 		}
 
-		contentStr := string(content)
 		relPath, _ := filepath.Rel(v.path, path)
-
-		// Check match based on scope
-		matched := false
-		matchLine := 0
-		matchContent := ""
-
-		switch searchIn {
-		case "file":
-			if matchTerms(relPath, terms, operator) {
-				matched = true
-				matchContent = relPath
-			}
-		case "heading":
-			headings := extractHeadings(contentStr) // helper from batch.go
-			for _, h := range headings {
-				if matchTerms(h.Text, terms, operator) {
-					matched = true
-					matchLine = h.Line
-					matchContent = h.Text
-					break
-				}
-			}
-		default: // content
-			lines := strings.Split(contentStr, "\n")
-			for i, line := range lines {
-				if matchTerms(line, terms, operator) {
-					matched = true
-					matchLine = i + 1
-					matchContent = strings.TrimSpace(line)
-					break // Just find first match per file for now
-				}
-			}
-		}
-
-		if matched {
-			results = append(results, SearchResult{
-				File:    relPath,
-				Line:    matchLine,
-				Content: matchContent,
-			})
+		if matched, line, text := matchNoteByScope(searchIn, relPath, string(content), terms, operator); matched {
+			results = append(results, SearchResult{File: relPath, Line: line, Content: text})
 		}
 
 		return nil
@@ -108,15 +89,24 @@ func (v *Vault) SearchAdvancedHandler(ctx context.Context, req *mcp.CallToolRequ
 	if len(results) == 0 {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("No matches found for: %s", query)},
+				&mcp.TextContent{Text: fmt.Sprintf("No matches found for: %s", args.Query)},
 			},
 		}, nil, nil
 	}
 
-	if limit > 0 && len(results) > limit {
+	if len(results) > limit {
 		results = results[:limit]
 	}
 
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: formatSearchResults(results, args.Query)},
+		},
+	}, nil, nil
+}
+
+// formatSearchResults formats search results grouped by file.
+func formatSearchResults(results []SearchResult, query string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Found %d matches for %q:\n\n", len(results), query))
 
@@ -133,80 +123,75 @@ func (v *Vault) SearchAdvancedHandler(ctx context.Context, req *mcp.CallToolRequ
 			sb.WriteString(fmt.Sprintf("  L%d: %s\n", r.Line, truncate(r.Content, 100)))
 		}
 	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			&mcp.TextContent{Text: sb.String()},
-		},
-	}, nil, nil
+	return sb.String()
 }
 
-// SearchDateHandler searches notes by date (created or modified)
-func (v *Vault) SearchDateHandler(ctx context.Context, req *mcp.CallToolRequest, args SearchDateArgs) (*mcp.CallToolResult, any, error) {
-	fromStr := args.From
-	toStr := args.To
-	dateType := args.DateType
-	dir := args.Directory
-	limit := args.Limit
-
-	if dateType == "" {
-		dateType = "modified"
-	}
-	if limit <= 0 {
-		limit = 50
-	}
-
-	var fromTime, toTime time.Time
-	var err error
-
+// parseDateRange parses from/to date strings and returns the time range.
+func parseDateRange(fromStr, toStr string) (fromTime, toTime time.Time, err error) {
 	if fromStr != "" {
 		fromTime, err = time.Parse("2006-01-02", fromStr)
 		if err != nil {
-			return nil, nil, fmt.Errorf("invalid from date: %v", err)
+			return fromTime, toTime, fmt.Errorf("invalid from date: %v", err)
 		}
 	}
 	if toStr != "" {
 		toTime, err = time.Parse("2006-01-02", toStr)
 		if err != nil {
-			return nil, nil, fmt.Errorf("invalid to date: %v", err)
+			return fromTime, toTime, fmt.Errorf("invalid to date: %v", err)
 		}
-		// Set to end of day
 		toTime = toTime.Add(24*time.Hour - time.Nanosecond)
+	}
+	return fromTime, toTime, nil
+}
+
+// isTimeInRange checks whether t falls within the [from, to] range.
+// Zero-value bounds are treated as unbounded.
+func isTimeInRange(t, from, to time.Time) bool {
+	if !from.IsZero() && t.Before(from) {
+		return false
+	}
+	if !to.IsZero() && t.After(to) {
+		return false
+	}
+	return true
+}
+
+type dateResult struct {
+	path string
+	time time.Time
+}
+
+// SearchDateHandler searches notes by date (created or modified)
+func (v *Vault) SearchDateHandler(ctx context.Context, req *mcp.CallToolRequest, args SearchDateArgs) (*mcp.CallToolResult, any, error) {
+	limit := args.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+
+	fromTime, toTime, err := parseDateRange(args.From, args.To)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	searchPath := v.path
-	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+	if args.Directory != "" {
+		searchPath = filepath.Join(v.path, args.Directory)
 	}
 
-	type dateResult struct {
-		path string
-		time time.Time
-	}
+	// Note: "created" date type falls back to modtime since Go's os.FileInfo
+	// does not expose creation time cross-platform. A future improvement could
+	// read creation dates from frontmatter.
 	var results []dateResult
 
 	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
 			return nil
 		}
-
-		checkTime := info.ModTime()
-		// Go doesn't provide creation time cross-platform easily in os.FileInfo
-		// So we fallback to modtime or skip creation time check strictly
-		if dateType == "created" {
-			// In a real implementation, we might use syscall or frontmatter
-			// For now, warn or fallback
-		}
-
-		if !fromTime.IsZero() && checkTime.Before(fromTime) {
+		if !isTimeInRange(info.ModTime(), fromTime, toTime) {
 			return nil
 		}
-		if !toTime.IsZero() && checkTime.After(toTime) {
-			return nil
-		}
-
 		relPath, _ := filepath.Rel(v.path, path)
-		results = append(results, dateResult{path: relPath, time: checkTime})
+		results = append(results, dateResult{path: relPath, time: info.ModTime()})
 		return nil
 	})
 
@@ -222,12 +207,11 @@ func (v *Vault) SearchDateHandler(ctx context.Context, req *mcp.CallToolRequest,
 		}, nil, nil
 	}
 
-	// Sort by date descending
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].time.After(results[j].time)
 	})
 
-	if limit > 0 && len(results) > limit {
+	if len(results) > limit {
 		results = results[:limit]
 	}
 
@@ -342,18 +326,19 @@ func parseSearchTerms(query string) []string {
 	inQuote := false
 
 	for _, c := range query {
-		if c == '"' {
+		switch {
+		case c == '"':
 			inQuote = !inQuote
 			if !inQuote && current.Len() > 0 {
 				terms = append(terms, current.String())
 				current.Reset()
 			}
-		} else if c == ' ' && !inQuote {
+		case c == ' ' && !inQuote:
 			if current.Len() > 0 {
 				terms = append(terms, current.String())
 				current.Reset()
 			}
-		} else {
+		default:
 			current.WriteRune(c)
 		}
 	}

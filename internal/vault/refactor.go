@@ -64,7 +64,7 @@ func (v *Vault) ExtractNoteHandler(ctx context.Context, req *mcp.CallToolRequest
 		// Add frontmatter if extracting
 		newContent := fmt.Sprintf("# %s\n\n%s", section.title, strings.TrimSpace(section.content))
 
-		if err := os.WriteFile(newPath, []byte(newContent), 0o644); err != nil {
+		if err := os.WriteFile(newPath, []byte(newContent), 0o600); err != nil {
 			return nil, nil, fmt.Errorf("failed to write %s: %v", filename, err)
 		}
 
@@ -213,7 +213,7 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, nil, fmt.Errorf("failed to create directory: %v", err)
 	}
 
-	if err := os.WriteFile(outputFull, []byte(merged), 0o644); err != nil {
+	if err := os.WriteFile(outputFull, []byte(merged), 0o600); err != nil {
 		return nil, nil, fmt.Errorf("failed to write merged note: %v", err)
 	}
 
@@ -286,7 +286,7 @@ func (v *Vault) ExtractSectionHandler(ctx context.Context, req *mcp.CallToolRequ
 	// Create new note with extracted content
 	newContent := fmt.Sprintf("# %s\n\n%s", heading, strings.TrimSpace(sectionContent))
 
-	if err := os.WriteFile(outputFull, []byte(newContent), 0o644); err != nil {
+	if err := os.WriteFile(outputFull, []byte(newContent), 0o600); err != nil {
 		return nil, nil, fmt.Errorf("failed to write new note: %v", err)
 	}
 
@@ -302,7 +302,7 @@ func (v *Vault) ExtractSectionHandler(ctx context.Context, req *mcp.CallToolRequ
 			newOriginal += linkText
 		}
 
-		if err := os.WriteFile(fullPath, []byte(newOriginal), 0o644); err != nil {
+		if err := os.WriteFile(fullPath, []byte(newOriginal), 0o600); err != nil {
 			return nil, nil, fmt.Errorf("failed to update original: %v", err)
 		}
 	}
@@ -390,7 +390,7 @@ func (v *Vault) DuplicateNoteHandler(ctx context.Context, req *mcp.CallToolReque
 		return nil, nil, fmt.Errorf("failed to create directory: %v", err)
 	}
 
-	if err := os.WriteFile(outputFull, content, 0o644); err != nil {
+	if err := os.WriteFile(outputFull, content, 0o600); err != nil {
 		return nil, nil, fmt.Errorf("failed to write duplicate: %v", err)
 	}
 

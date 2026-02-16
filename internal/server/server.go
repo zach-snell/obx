@@ -162,6 +162,16 @@ func registerTools(s *mcp.Server, v *vault.Vault) {
 
 	// Metadata / Frontmatter
 	mcp.AddTool(s, &mcp.Tool{
+		Name:        "get-frontmatter",
+		Description: "Get frontmatter properties of a note",
+	}, v.GetFrontmatterHandler)
+
+	mcp.AddTool(s, &mcp.Tool{
+		Name:        "query-frontmatter",
+		Description: "Search notes by frontmatter properties",
+	}, v.QueryFrontmatterHandler)
+
+	mcp.AddTool(s, &mcp.Tool{
 		Name:        "set-frontmatter",
 		Description: "Set a frontmatter key",
 	}, v.SetFrontmatterHandler)

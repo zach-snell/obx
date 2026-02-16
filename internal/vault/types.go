@@ -332,13 +332,6 @@ type BrokenLinksArgs struct {
 	Directory string `json:"directory,omitempty" jsonschema:"Directory to limit search to"`
 }
 
-// GraphNeighborsArgs arguments for graph-neighbors
-type GraphNeighborsArgs struct {
-	Path            string `json:"path" jsonschema:"Path to the note"`
-	Directory       string `json:"directory,omitempty" jsonschema:"Directory scope"`
-	IncludeDeadEnds bool   `json:"include_no_outgoing,omitempty" jsonschema:"Include nodes with no outgoing links"`
-}
-
 // --- Inline Fields ---
 
 // GetInlineFieldsArgs arguments for get-inline-fields
