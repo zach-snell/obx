@@ -194,6 +194,9 @@ func (v *Vault) searchInlineFields(dir string, query *inlineFieldQuery) ([]inlin
 	if dir != "" {
 		searchPath = filepath.Join(v.path, dir)
 	}
+	if !v.isPathSafe(searchPath) {
+		return nil, fmt.Errorf("search path must be within vault")
+	}
 
 	var results []inlineFieldResult
 

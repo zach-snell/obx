@@ -66,6 +66,9 @@ func (v *Vault) QueryFrontmatterHandler(ctx context.Context, req *mcp.CallToolRe
 	if dir != "" {
 		searchPath = filepath.Join(v.path, dir)
 	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
 
 	type result struct {
 		path        string

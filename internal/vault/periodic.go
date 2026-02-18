@@ -123,6 +123,11 @@ func (v *Vault) QuarterlyNoteHandler(ctx context.Context, req *mcp.CallToolReque
 	filename := fmt.Sprintf("%d-Q%d.md", year, quarter)
 
 	return v.getOrCreatePeriodicNote(folder, filename, createIfMissing, func() string {
+		startMonth := time.Month((quarter-1)*3 + 1)
+		month1 := time.Date(year, startMonth, 1, 0, 0, 0, 0, targetDate.Location()).Format("2006-01")
+		month2 := time.Date(year, startMonth+1, 1, 0, 0, 0, 0, targetDate.Location()).Format("2006-01")
+		month3 := time.Date(year, startMonth+2, 1, 0, 0, 0, 0, targetDate.Location()).Format("2006-01")
+
 		return fmt.Sprintf(`# Q%d %d
 
 ## Goals
@@ -131,15 +136,15 @@ func (v *Vault) QuarterlyNoteHandler(ctx context.Context, req *mcp.CallToolReque
 
 ## Monthly Reviews
 
-- [[%d-01]]
-- [[%d-02]]
-- [[%d-03]]
+- [[%s]]
+- [[%s]]
+- [[%s]]
 
 ## Notes
 
 ## Quarter Review
 
-`, quarter, year, year, year, year)
+`, quarter, year, month1, month2, month3)
 	})
 }
 

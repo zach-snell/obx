@@ -25,6 +25,9 @@ func (v *Vault) ListTemplatesHandler(ctx context.Context, req *mcp.CallToolReque
 	}
 
 	searchPath := filepath.Join(v.path, folder)
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("templates folder must be within vault")
+	}
 
 	if _, err := os.Stat(searchPath); os.IsNotExist(err) {
 		return &mcp.CallToolResult{

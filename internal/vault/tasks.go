@@ -156,6 +156,9 @@ func (v *Vault) ListTasksHandler(ctx context.Context, req *mcp.CallToolRequest, 
 	if args.Directory != "" {
 		searchPath = filepath.Join(v.path, args.Directory)
 	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
 
 	tasks, err := v.collectTasks(searchPath, status)
 	if err != nil {

@@ -23,13 +23,56 @@ func New(path string) *Vault {
 
 // isPathSafe checks if the given path is within the vault (prevents path traversal)
 func (v *Vault) isPathSafe(fullPath string) bool {
-	cleanPath := filepath.Clean(fullPath)
-	rel, err := filepath.Rel(v.path, cleanPath)
+	cleanVault := filepath.Clean(v.path)
+	cleanTarget := filepath.Clean(fullPath)
+
+	// First apply lexical path traversal protection.
+	if !isPathWithinBase(cleanVault, cleanTarget) {
+		return false
+	}
+
+	// Then apply symlink-aware protection to catch vault-internal symlink escapes.
+	resolvedVault := resolvePathWithExistingAncestors(cleanVault)
+	resolvedTarget := resolvePathWithExistingAncestors(cleanTarget)
+	return isPathWithinBase(resolvedVault, resolvedTarget)
+}
+
+func isPathWithinBase(basePath, targetPath string) bool {
+	rel, err := filepath.Rel(basePath, targetPath)
 	if err != nil {
 		return false
 	}
-	// Path is unsafe if it tries to escape via ".."
-	return !strings.HasPrefix(rel, "..") && rel != ".."
+	return rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
+}
+
+func resolvePathWithExistingAncestors(targetPath string) string {
+	existingPath := targetPath
+	var tail []string
+
+	for {
+		if _, err := os.Lstat(existingPath); err == nil {
+			break
+		}
+
+		parent := filepath.Dir(existingPath)
+		if parent == existingPath {
+			break
+		}
+
+		tail = append([]string{filepath.Base(existingPath)}, tail...)
+		existingPath = parent
+	}
+
+	resolvedPath := existingPath
+	if resolved, err := filepath.EvalSymlinks(existingPath); err == nil {
+		resolvedPath = resolved
+	}
+
+	for _, segment := range tail {
+		resolvedPath = filepath.Join(resolvedPath, segment)
+	}
+
+	return filepath.Clean(resolvedPath)
 }
 
 // ListNotesHandler lists all notes in the vault with optional pagination
@@ -37,10 +80,14 @@ func (v *Vault) ListNotesHandler(ctx context.Context, req *mcp.CallToolRequest, 
 	dir := args.Directory
 	limit := args.Limit
 	offset := args.Offset
+	mode := normalizeMode(args.Mode)
 
 	searchPath := v.path
 	if dir != "" {
 		searchPath = filepath.Join(v.path, dir)
+	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
 	}
 
 	var notes []string
@@ -61,6 +108,15 @@ func (v *Vault) ListNotesHandler(ctx context.Context, req *mcp.CallToolRequest, 
 
 	totalCount := len(notes)
 	if totalCount == 0 {
+		if !isDetailedMode(mode) {
+			return compactResult("No notes found", false, map[string]any{
+				"total_count":    0,
+				"returned_count": 0,
+				"offset":         offset,
+				"limit":          limit,
+				"notes":          []string{},
+			}, nil)
+		}
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				&mcp.TextContent{Text: "No notes found"},
@@ -71,6 +127,20 @@ func (v *Vault) ListNotesHandler(ctx context.Context, req *mcp.CallToolRequest, 
 	// Apply pagination
 	if offset > 0 {
 		if offset >= totalCount {
+			if !isDetailedMode(mode) {
+				return compactResult(
+					fmt.Sprintf("Offset %d exceeds total count %d", offset, totalCount),
+					false,
+					map[string]any{
+						"total_count":    totalCount,
+						"returned_count": 0,
+						"offset":         offset,
+						"limit":          limit,
+						"notes":          []string{},
+					},
+					nil,
+				)
+			}
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{
 					&mcp.TextContent{Text: fmt.Sprintf("Offset %d exceeds total count %d", offset, totalCount)},
@@ -80,8 +150,38 @@ func (v *Vault) ListNotesHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		notes = notes[offset:]
 	}
 
+	truncated := false
 	if limit > 0 && limit < len(notes) {
 		notes = notes[:limit]
+		truncated = true
+	}
+
+	if !isDetailedMode(mode) {
+		next := map[string]any(nil)
+		if offset+len(notes) < totalCount {
+			next = map[string]any{
+				"tool": "list-notes",
+				"args": map[string]any{
+					"directory": dir,
+					"offset":    offset + len(notes),
+					"limit":     limit,
+					"mode":      modeCompact,
+				},
+			}
+		}
+
+		return compactResult(
+			fmt.Sprintf("Found %d notes", totalCount),
+			truncated,
+			map[string]any{
+				"total_count":    totalCount,
+				"returned_count": len(notes),
+				"offset":         offset,
+				"limit":          limit,
+				"notes":          notes,
+			},
+			next,
+		)
 	}
 
 	var sb strings.Builder

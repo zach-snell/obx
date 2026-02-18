@@ -36,6 +36,9 @@ func (v *Vault) FindStubsHandler(ctx context.Context, req *mcp.CallToolRequest, 
 	if dir != "" {
 		searchPath = filepath.Join(v.path, dir)
 	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
 
 	var stubs []stubInfo
 
@@ -124,6 +127,9 @@ func (v *Vault) FindOutdatedHandler(ctx context.Context, req *mcp.CallToolReques
 	searchPath := v.path
 	if dir != "" {
 		searchPath = filepath.Join(v.path, dir)
+	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
 	}
 
 	cutoff := time.Now().AddDate(0, 0, -days)
