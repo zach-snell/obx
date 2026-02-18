@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // vaultStats holds all collected statistics
@@ -128,8 +128,8 @@ func (s *vaultStats) formatAverages(sb *strings.Builder) {
 }
 
 // VaultStatsHandler returns statistics about the vault
-func (v *Vault) VaultStatsHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	dir := req.GetString("directory", "")
+func (v *Vault) VaultStatsHandler(ctx context.Context, req *mcp.CallToolRequest, args VaultStatsArgs) (*mcp.CallToolResult, any, error) {
+	dir := args.Directory
 
 	searchPath := v.path
 	if dir != "" {
@@ -170,8 +170,12 @@ func (v *Vault) VaultStatsHandler(ctx context.Context, req mcp.CallToolRequest) 
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to gather stats: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to gather stats: %v", err)
 	}
 
-	return mcp.NewToolResultText(stats.formatStats(dir)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: stats.formatStats(dir)},
+		},
+	}, nil, nil
 }

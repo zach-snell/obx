@@ -8,28 +8,17 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // frontmatterRegex matches the frontmatter block
 var frontmatterRegex = regexp.MustCompile(`(?s)^---\n(.*?)\n---\n?`)
 
 // SetFrontmatterHandler sets or updates a frontmatter property
-func (v *Vault) SetFrontmatterHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	notePath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
-
-	key, err := req.RequireString("key")
-	if err != nil {
-		return mcp.NewToolResultError("key is required"), nil
-	}
-
-	value, err := req.RequireString("value")
-	if err != nil {
-		return mcp.NewToolResultError("value is required"), nil
-	}
+func (v *Vault) SetFrontmatterHandler(ctx context.Context, req *mcp.CallToolRequest, args SetFrontmatterArgs) (*mcp.CallToolResult, any, error) {
+	notePath := args.Path
+	key := args.Key
+	value := args.Value
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
@@ -37,37 +26,34 @@ func (v *Vault) SetFrontmatterHandler(ctx context.Context, req mcp.CallToolReque
 
 	fullPath := filepath.Join(v.path, notePath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Note not found: %s", notePath)), nil
+			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	newContent := setFrontmatterKey(string(content), key, value)
 
 	if err := os.WriteFile(fullPath, []byte(newContent), 0o600); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to write note: %v", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Set %s: %s in %s", key, value, notePath)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Set %s: %s in %s", key, value, notePath)},
+		},
+	}, nil, nil
 }
 
 // RemoveFrontmatterKeyHandler removes a frontmatter property
-func (v *Vault) RemoveFrontmatterKeyHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	notePath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
-
-	key, err := req.RequireString("key")
-	if err != nil {
-		return mcp.NewToolResultError("key is required"), nil
-	}
+func (v *Vault) RemoveFrontmatterKeyHandler(ctx context.Context, req *mcp.CallToolRequest, args DeleteFrontmatterArgs) (*mcp.CallToolResult, any, error) {
+	notePath := args.Path
+	key := args.Key
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
@@ -75,40 +61,41 @@ func (v *Vault) RemoveFrontmatterKeyHandler(ctx context.Context, req mcp.CallToo
 
 	fullPath := filepath.Join(v.path, notePath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Note not found: %s", notePath)), nil
+			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	newContent, removed := removeFrontmatterKey(string(content), key)
 	if !removed {
-		return mcp.NewToolResultText(fmt.Sprintf("Key '%s' not found in frontmatter", key)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Key '%s' not found in frontmatter", key)},
+			},
+		}, nil, nil
 	}
 
 	if err := os.WriteFile(fullPath, []byte(newContent), 0o600); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to write note: %v", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Removed %s from %s", key, notePath)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Removed %s from %s", key, notePath)},
+		},
+	}, nil, nil
 }
 
 // AddAliasHandler adds an alias to a note's frontmatter
-func (v *Vault) AddAliasHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	notePath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
-
-	alias, err := req.RequireString("alias")
-	if err != nil {
-		return mcp.NewToolResultError("alias is required"), nil
-	}
+func (v *Vault) AddAliasHandler(ctx context.Context, req *mcp.CallToolRequest, args AddAliasArgs) (*mcp.CallToolResult, any, error) {
+	notePath := args.Path
+	alias := args.Alias
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
@@ -116,37 +103,34 @@ func (v *Vault) AddAliasHandler(ctx context.Context, req mcp.CallToolRequest) (*
 
 	fullPath := filepath.Join(v.path, notePath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Note not found: %s", notePath)), nil
+			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	newContent := addToFrontmatterArray(string(content), "aliases", alias)
 
 	if err := os.WriteFile(fullPath, []byte(newContent), 0o600); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to write note: %v", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Added alias '%s' to %s", alias, notePath)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Added alias '%s' to %s", alias, notePath)},
+		},
+	}, nil, nil
 }
 
 // AddTagToFrontmatterHandler adds a tag to frontmatter
-func (v *Vault) AddTagToFrontmatterHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	notePath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
-
-	tag, err := req.RequireString("tag")
-	if err != nil {
-		return mcp.NewToolResultError("tag is required"), nil
-	}
+func (v *Vault) AddTagToFrontmatterHandler(ctx context.Context, req *mcp.CallToolRequest, args AddTagArgs) (*mcp.CallToolResult, any, error) {
+	notePath := args.Path
+	tag := args.Tag
 
 	// Normalize tag (remove # if present)
 	tag = strings.TrimPrefix(tag, "#")
@@ -157,24 +141,28 @@ func (v *Vault) AddTagToFrontmatterHandler(ctx context.Context, req mcp.CallTool
 
 	fullPath := filepath.Join(v.path, notePath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Note not found: %s", notePath)), nil
+			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	newContent := addToFrontmatterArray(string(content), "tags", tag)
 
 	if err := os.WriteFile(fullPath, []byte(newContent), 0o600); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to write note: %v", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Added tag '%s' to frontmatter in %s", tag, notePath)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Added tag '%s' to frontmatter in %s", tag, notePath)},
+		},
+	}, nil, nil
 }
 
 // setFrontmatterKey sets a key in frontmatter, creating frontmatter if needed

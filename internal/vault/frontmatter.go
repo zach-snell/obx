@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Frontmatter represents parsed YAML frontmatter
@@ -46,13 +46,9 @@ func ParseFrontmatter(content string) Frontmatter {
 }
 
 // QueryFrontmatterHandler searches notes by frontmatter properties
-func (v *Vault) QueryFrontmatterHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	query, err := req.RequireString("query")
-	if err != nil {
-		return mcp.NewToolResultError("query is required (format: key=value or key:value)"), nil
-	}
-
-	dir := req.GetString("directory", "")
+func (v *Vault) QueryFrontmatterHandler(ctx context.Context, req *mcp.CallToolRequest, args QueryFrontmatterArgs) (*mcp.CallToolResult, any, error) {
+	query := args.Query
+	dir := args.Directory
 
 	// Parse query (supports key=value or key:value)
 	var key, value string
@@ -63,7 +59,7 @@ func (v *Vault) QueryFrontmatterHandler(ctx context.Context, req mcp.CallToolReq
 		key = strings.ToLower(strings.TrimSpace(query[:idx]))
 		value = strings.ToLower(strings.TrimSpace(query[idx+1:]))
 	} else {
-		return mcp.NewToolResultError("Invalid query format. Use: key=value or key:value"), nil
+		return nil, nil, fmt.Errorf("invalid query format: use key=value or key:value")
 	}
 
 	searchPath := v.path
@@ -78,7 +74,7 @@ func (v *Vault) QueryFrontmatterHandler(ctx context.Context, req mcp.CallToolReq
 
 	var results []result
 
-	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -109,11 +105,15 @@ func (v *Vault) QueryFrontmatterHandler(ctx context.Context, req mcp.CallToolReq
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Query failed: %v", err)), nil
+		return nil, nil, fmt.Errorf("query failed: %v", err)
 	}
 
 	if len(results) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No notes found matching: %s", query)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No notes found matching: %s", query)},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -127,38 +127,43 @@ func (v *Vault) QueryFrontmatterHandler(ctx context.Context, req mcp.CallToolReq
 		sb.WriteString("\n")
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // GetFrontmatterHandler returns frontmatter for a specific note
-func (v *Vault) GetFrontmatterHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	path, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
+func (v *Vault) GetFrontmatterHandler(ctx context.Context, req *mcp.CallToolRequest, args GetFrontmatterArgs) (*mcp.CallToolResult, any, error) {
+	path := args.Path
 
 	if !strings.HasSuffix(path, ".md") {
-		return mcp.NewToolResultError("path must end with .md"), nil
+		return nil, nil, fmt.Errorf("path must end with .md")
 	}
 
 	fullPath := filepath.Join(v.path, path)
 
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Note not found: %s", path)), nil
+			return nil, nil, fmt.Errorf("note not found: %s", path)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	fm := ParseFrontmatter(string(content))
 
 	if len(fm) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No frontmatter found in: %s", path)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No frontmatter found in: %s", path)},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -167,5 +172,9 @@ func (v *Vault) GetFrontmatterHandler(ctx context.Context, req mcp.CallToolReque
 		sb.WriteString(fmt.Sprintf("%s: %s\n", k, v))
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }

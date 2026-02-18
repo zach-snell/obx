@@ -8,15 +8,32 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// BacklinksHandler finds all notes that link to a given note
-func (v *Vault) BacklinksHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	target, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
+var (
+	// Matches wikilinks: [[Note Name]] or [[path/to/note|Alias]]
+	wikilinkRegex = regexp.MustCompile(`\[\[([^\]|]+)(?:\|[^\]]+)?\]\]`)
+)
+
+// ExtractWikilinks extracts all wikilinks from content
+func ExtractWikilinks(content string) []string {
+	matches := wikilinkRegex.FindAllStringSubmatch(content, -1)
+	var links []string
+	seen := make(map[string]bool)
+	for _, match := range matches {
+		link := strings.TrimSpace(match[1])
+		if link != "" && !seen[link] {
+			links = append(links, link)
+			seen[link] = true
+		}
 	}
+	return links
+}
+
+// BacklinksHandler finds all notes that link to a given note
+func (v *Vault) BacklinksHandler(ctx context.Context, req *mcp.CallToolRequest, args GetBacklinksArgs) (*mcp.CallToolResult, any, error) {
+	target := args.Path
 
 	// Normalize target: remove .md extension for matching
 	targetName := strings.TrimSuffix(target, ".md")
@@ -37,7 +54,7 @@ func (v *Vault) BacklinksHandler(ctx context.Context, req mcp.CallToolRequest) (
 
 	var backlinks []backlink
 
-	err = filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -67,11 +84,11 @@ func (v *Vault) BacklinksHandler(ctx context.Context, req mcp.CallToolRequest) (
 				if pattern.MatchString(line) {
 					matchCount++
 					// Add context (truncated line)
-					ctx := strings.TrimSpace(line)
-					if len(ctx) > 100 {
-						ctx = ctx[:100] + "..."
+					ctxLine := strings.TrimSpace(line)
+					if len(ctxLine) > 100 {
+						ctxLine = ctxLine[:100] + "..."
 					}
-					matches = append(matches, fmt.Sprintf("L%d: %s", i+1, ctx))
+					matches = append(matches, fmt.Sprintf("L%d: %s", i+1, ctxLine))
 				}
 			}
 		}
@@ -88,11 +105,15 @@ func (v *Vault) BacklinksHandler(ctx context.Context, req mcp.CallToolRequest) (
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to search backlinks: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to search backlinks: %v", err)
 	}
 
 	if len(backlinks) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No backlinks found for: %s", target)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No backlinks found for: %s", target)},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -100,46 +121,91 @@ func (v *Vault) BacklinksHandler(ctx context.Context, req mcp.CallToolRequest) (
 
 	for _, bl := range backlinks {
 		sb.WriteString(fmt.Sprintf("## %s (%d links)\n", bl.path, bl.count))
-		for _, ctx := range bl.context {
-			sb.WriteString(fmt.Sprintf("  %s\n", ctx))
+		for _, ctxLine := range bl.context {
+			sb.WriteString(fmt.Sprintf("  %s\n", ctxLine))
 		}
 		sb.WriteString("\n")
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
+}
+
+// updateLinksInVault updates wikilinks from oldName to newName across the vault
+func (v *Vault) updateLinksInVault(oldName, newName string) error {
+	// Prepare link patterns
+	// Handle [[oldName]] and [[oldName|alias]]
+	patterns := []struct {
+		pattern *regexp.Regexp
+		replace string
+	}{
+		{
+			pattern: regexp.MustCompile(`\[\[` + regexp.QuoteMeta(oldName) + `\]\]`),
+			replace: "[[" + newName + "]]",
+		},
+		{
+			pattern: regexp.MustCompile(`\[\[` + regexp.QuoteMeta(oldName) + `\|([^\]]+)\]\]`),
+			replace: "[[" + newName + "|$1]]",
+		},
+	}
+
+	return filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if info.IsDir() || !strings.HasSuffix(path, ".md") {
+			return nil
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+
+		contentStr := string(content)
+		newContent := contentStr
+
+		for _, r := range patterns {
+			newContent = r.pattern.ReplaceAllString(newContent, r.replace)
+		}
+
+		if newContent != contentStr {
+			if err := os.WriteFile(path, []byte(newContent), 0o600); err != nil {
+				return nil // Continue on error
+			}
+		}
+
+		return nil
+	})
 }
 
 // RenameNoteHandler renames a note and updates all links to it
-func (v *Vault) RenameNoteHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	oldPath, err := req.RequireString("old_path")
-	if err != nil {
-		return mcp.NewToolResultError("old_path is required"), nil
-	}
-
-	newPath, err := req.RequireString("new_path")
-	if err != nil {
-		return mcp.NewToolResultError("new_path is required"), nil
-	}
+func (v *Vault) RenameNoteHandler(ctx context.Context, req *mcp.CallToolRequest, args RenameNoteArgs) (*mcp.CallToolResult, any, error) {
+	oldPath := args.OldPath
+	newPath := args.NewPath
 
 	if !strings.HasSuffix(oldPath, ".md") || !strings.HasSuffix(newPath, ".md") {
-		return mcp.NewToolResultError("paths must end with .md"), nil
+		return nil, nil, fmt.Errorf("paths must end with .md")
 	}
 
 	oldFullPath := filepath.Join(v.path, oldPath)
 	newFullPath := filepath.Join(v.path, newPath)
 
 	if !v.isPathSafe(oldFullPath) || !v.isPathSafe(newFullPath) {
-		return mcp.NewToolResultError("paths must be within vault"), nil
+		return nil, nil, fmt.Errorf("paths must be within vault")
 	}
 
 	// Check source exists
 	if _, err := os.Stat(oldFullPath); os.IsNotExist(err) {
-		return mcp.NewToolResultError(fmt.Sprintf("Note not found: %s", oldPath)), nil
+		return nil, nil, fmt.Errorf("note not found: %s", oldPath)
 	}
 
 	// Check destination doesn't exist
 	if _, err := os.Stat(newFullPath); err == nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Destination already exists: %s", newPath)), nil
+		return nil, nil, fmt.Errorf("destination already exists: %s", newPath)
 	}
 
 	// Prepare link patterns
@@ -173,7 +239,7 @@ func (v *Vault) RenameNoteHandler(ctx context.Context, req mcp.CallToolRequest) 
 
 	// Update all notes that link to the old path
 	updatedFiles := 0
-	err = filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -207,19 +273,41 @@ func (v *Vault) RenameNoteHandler(ctx context.Context, req mcp.CallToolRequest) 
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to update links: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to update links: %v", err)
 	}
 
 	// Create destination directory if needed
 	newDir := filepath.Dir(newFullPath)
 	if err := os.MkdirAll(newDir, 0o755); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create directory: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to create directory: %v", err)
 	}
 
 	// Rename the file
 	if err := os.Rename(oldFullPath, newFullPath); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to rename note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to rename note: %v", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Renamed %s -> %s\nUpdated links in %d files", oldPath, newPath, updatedFiles)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Renamed %s -> %s\nUpdated links in %d files", oldPath, newPath, updatedFiles)},
+		},
+	}, nil, nil
+}
+
+// updateWikilinks replaces wikilinks from oldName to newName
+func updateWikilinks(content, oldName, newName string) string {
+	// Handle [[oldName]] and [[oldName|alias]]
+	patterns := []struct {
+		old string
+		new string
+	}{
+		{"[[" + oldName + "]]", "[[" + newName + "]]"},
+		{"[[" + oldName + "|", "[[" + newName + "|"},
+	}
+
+	for _, p := range patterns {
+		content = strings.ReplaceAll(content, p.old, p.new)
+	}
+
+	return content
 }

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // stubInfo holds information about a stub note
@@ -20,10 +20,17 @@ type stubInfo struct {
 }
 
 // FindStubsHandler finds notes with few words
-func (v *Vault) FindStubsHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	maxWords := int(req.GetInt("max_words", 100))
-	dir := req.GetString("directory", "")
-	limit := int(req.GetInt("limit", 50))
+func (v *Vault) FindStubsHandler(ctx context.Context, req *mcp.CallToolRequest, args FindStubsArgs) (*mcp.CallToolResult, any, error) {
+	maxWords := args.MaxWords
+	dir := args.Directory
+	limit := args.Limit
+
+	if maxWords <= 0 {
+		maxWords = 100
+	}
+	if limit <= 0 {
+		limit = 50
+	}
 
 	searchPath := v.path
 	if dir != "" {
@@ -58,11 +65,15 @@ func (v *Vault) FindStubsHandler(ctx context.Context, req mcp.CallToolRequest) (
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to scan vault: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to scan vault: %v", err)
 	}
 
 	if len(stubs) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No stub notes found (notes with ≤%d words)", maxWords)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No stub notes found (notes with ≤%d words)", maxWords)},
+			},
+		}, nil, nil
 	}
 
 	// Sort by word count ascending
@@ -83,7 +94,11 @@ func (v *Vault) FindStubsHandler(ctx context.Context, req mcp.CallToolRequest) (
 			s.path, s.wordCount, s.modTime.Format("Jan 2, 2006"))
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // outdatedInfo holds information about an outdated note
@@ -94,10 +109,17 @@ type outdatedInfo struct {
 }
 
 // FindOutdatedHandler finds notes not modified in a while
-func (v *Vault) FindOutdatedHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	days := int(req.GetInt("days", 90))
-	dir := req.GetString("directory", "")
-	limit := int(req.GetInt("limit", 50))
+func (v *Vault) FindOutdatedHandler(ctx context.Context, req *mcp.CallToolRequest, args FindOutdatedArgs) (*mcp.CallToolResult, any, error) {
+	days := args.Days
+	dir := args.Directory
+	limit := args.Limit
+
+	if days <= 0 {
+		days = 90
+	}
+	if limit <= 0 {
+		limit = 50
+	}
 
 	searchPath := v.path
 	if dir != "" {
@@ -126,11 +148,15 @@ func (v *Vault) FindOutdatedHandler(ctx context.Context, req mcp.CallToolRequest
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to scan vault: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to scan vault: %v", err)
 	}
 
 	if len(outdated) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No outdated notes found (all modified within %d days)", days)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No outdated notes found (all modified within %d days)", days)},
+			},
+		}, nil, nil
 	}
 
 	// Sort by oldest first
@@ -151,7 +177,11 @@ func (v *Vault) FindOutdatedHandler(ctx context.Context, req mcp.CallToolRequest
 			o.path, o.daysSince, o.modTime.Format("Jan 2, 2006"))
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // unlinkedMention represents text that could be linked
@@ -163,11 +193,8 @@ type unlinkedMention struct {
 }
 
 // UnlinkedMentionsHandler finds text matching note names that aren't linked
-func (v *Vault) UnlinkedMentionsHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	targetPath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
+func (v *Vault) UnlinkedMentionsHandler(ctx context.Context, req *mcp.CallToolRequest, args UnlinkedMentionsArgs) (*mcp.CallToolResult, any, error) {
+	targetPath := args.Path
 
 	if !strings.HasSuffix(targetPath, ".md") {
 		targetPath += ".md"
@@ -175,7 +202,7 @@ func (v *Vault) UnlinkedMentionsHandler(ctx context.Context, req mcp.CallToolReq
 
 	fullPath := filepath.Join(v.path, targetPath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	// Get the note name to search for
@@ -184,7 +211,7 @@ func (v *Vault) UnlinkedMentionsHandler(ctx context.Context, req mcp.CallToolReq
 
 	var mentions []unlinkedMention
 
-	err = filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
 			return nil
 		}
@@ -216,16 +243,16 @@ func (v *Vault) UnlinkedMentionsHandler(ctx context.Context, req mcp.CallToolReq
 			}
 
 			// Found an unlinked mention
-			ctx := line
-			if len(ctx) > 100 {
-				ctx = ctx[:100] + "..."
+			ctxLine := line
+			if len(ctxLine) > 100 {
+				ctxLine = ctxLine[:100] + "..."
 			}
 
 			mentions = append(mentions, unlinkedMention{
 				noteName: noteName,
 				foundIn:  relPath,
 				line:     i + 1,
-				context:  strings.TrimSpace(ctx),
+				context:  strings.TrimSpace(ctxLine),
 			})
 		}
 
@@ -233,11 +260,15 @@ func (v *Vault) UnlinkedMentionsHandler(ctx context.Context, req mcp.CallToolReq
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to scan vault: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to scan vault: %v", err)
 	}
 
 	if len(mentions) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No unlinked mentions of '%s' found", noteName)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No unlinked mentions of '%s' found", noteName)},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -258,7 +289,11 @@ func (v *Vault) UnlinkedMentionsHandler(ctx context.Context, req mcp.CallToolReq
 		sb.WriteString("\n")
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // linkSuggestion represents a suggested link
@@ -269,13 +304,13 @@ type linkSuggestion struct {
 }
 
 // SuggestLinksHandler suggests notes that should be linked
-func (v *Vault) SuggestLinksHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	notePath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
+func (v *Vault) SuggestLinksHandler(ctx context.Context, req *mcp.CallToolRequest, args SuggestLinksArgs) (*mcp.CallToolResult, any, error) {
+	notePath := args.Path
+	limit := args.Limit
 
-	limit := int(req.GetInt("limit", 10))
+	if limit <= 0 {
+		limit = 10
+	}
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
@@ -283,15 +318,15 @@ func (v *Vault) SuggestLinksHandler(ctx context.Context, req mcp.CallToolRequest
 
 	fullPath := filepath.Join(v.path, notePath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Note not found: %s", notePath)), nil
+			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	body := RemoveFrontmatter(string(content))
@@ -337,11 +372,15 @@ func (v *Vault) SuggestLinksHandler(ctx context.Context, req mcp.CallToolRequest
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to scan vault: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to scan vault: %v", err)
 	}
 
 	if len(suggestions) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No link suggestions for: %s", notePath)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No link suggestions for: %s", notePath)},
+			},
+		}, nil, nil
 	}
 
 	// Sort by strength
@@ -366,7 +405,11 @@ func (v *Vault) SuggestLinksHandler(ctx context.Context, req mcp.CallToolRequest
 			strings.TrimSuffix(s.targetNote, ".md"), s.reason)
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // isAlreadyLinked checks if text contains a wikilink to the given note

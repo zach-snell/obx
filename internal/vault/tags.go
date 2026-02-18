@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 var (
@@ -71,13 +71,9 @@ func ExtractTags(content string) []string {
 }
 
 // SearchByTagsHandler searches for notes containing all specified tags
-func (v *Vault) SearchByTagsHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	tagsStr, err := req.RequireString("tags")
-	if err != nil {
-		return mcp.NewToolResultError("tags is required"), nil
-	}
-
-	dir := req.GetString("directory", "")
+func (v *Vault) SearchByTagsHandler(ctx context.Context, req *mcp.CallToolRequest, args SearchTagsArgs) (*mcp.CallToolResult, any, error) {
+	tagsStr := args.Tags
+	dir := args.Directory
 
 	// Parse comma-separated tags
 	var searchTags []string
@@ -89,7 +85,7 @@ func (v *Vault) SearchByTagsHandler(ctx context.Context, req mcp.CallToolRequest
 	}
 
 	if len(searchTags) == 0 {
-		return mcp.NewToolResultError("at least one tag is required"), nil
+		return nil, nil, fmt.Errorf("at least one tag is required")
 	}
 
 	searchPath := v.path
@@ -103,7 +99,7 @@ func (v *Vault) SearchByTagsHandler(ctx context.Context, req mcp.CallToolRequest
 	}
 	var results []result
 
-	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -139,11 +135,15 @@ func (v *Vault) SearchByTagsHandler(ctx context.Context, req mcp.CallToolRequest
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Search failed: %v", err)), nil
+		return nil, nil, fmt.Errorf("search failed: %v", err)
 	}
 
 	if len(results) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No notes found with tags: %s", strings.Join(searchTags, ", "))), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No notes found with tags: %s", strings.Join(searchTags, ", "))},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -154,5 +154,9 @@ func (v *Vault) SearchByTagsHandler(ctx context.Context, req mcp.CallToolRequest
 		sb.WriteString(fmt.Sprintf("  Tags: %s\n", strings.Join(r.tags, ", ")))
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }

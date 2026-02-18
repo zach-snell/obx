@@ -7,35 +7,44 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// SplitNoteHandler splits a note at a heading into separate notes
-func (v *Vault) SplitNoteHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	path, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
+// ExtractNoteHandler splits a note at a heading into separate notes
+func (v *Vault) ExtractNoteHandler(ctx context.Context, req *mcp.CallToolRequest, args ExtractNoteArgs) (*mcp.CallToolResult, any, error) {
+	path := args.Path
+	level := args.Level
+	keepOriginal := args.KeepOriginal
+	outputDir := args.OutputDir
 
-	level := int(req.GetInt("level", 2))
-	keepOriginal := req.GetBool("keep_original", false)
-	outputDir := req.GetString("output_dir", "")
+	if level <= 0 {
+		level = 2
+	}
 
 	if !strings.HasSuffix(path, ".md") {
 		path += ".md"
 	}
 
 	fullPath := filepath.Join(v.path, path)
+
+	if !v.isPathSafe(fullPath) {
+		return nil, nil, fmt.Errorf("path must be within vault")
+	}
+
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	// Parse into sections by heading level
 	sections := splitByHeading(string(content), level)
 
 	if len(sections) <= 1 {
-		return mcp.NewToolResultText("No sections found to split at the specified heading level"), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: "No sections found to split at the specified heading level"},
+			},
+		}, nil, nil
 	}
 
 	// Determine output directory
@@ -43,8 +52,12 @@ func (v *Vault) SplitNoteHandler(ctx context.Context, req mcp.CallToolRequest) (
 		outputDir = filepath.Dir(path)
 	}
 	outputDirFull := filepath.Join(v.path, outputDir)
+	if !v.isPathSafe(outputDirFull) {
+		return nil, nil, fmt.Errorf("output directory must be within vault")
+	}
+
 	if err := os.MkdirAll(outputDirFull, 0o755); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create output directory: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to create output directory: %v", err)
 	}
 
 	var created []string
@@ -60,9 +73,8 @@ func (v *Vault) SplitNoteHandler(ctx context.Context, req mcp.CallToolRequest) (
 		// Add frontmatter if extracting
 		newContent := fmt.Sprintf("# %s\n\n%s", section.title, strings.TrimSpace(section.content))
 
-		//#nosec G306 -- Obsidian notes need to be readable by the user
-		if err := os.WriteFile(newPath, []byte(newContent), 0o644); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to write %s: %v", filename, err)), nil
+		if err := os.WriteFile(newPath, []byte(newContent), 0o600); err != nil {
+			return nil, nil, fmt.Errorf("failed to write %s: %v", filename, err)
 		}
 
 		relPath, _ := filepath.Rel(v.path, newPath)
@@ -71,7 +83,7 @@ func (v *Vault) SplitNoteHandler(ctx context.Context, req mcp.CallToolRequest) (
 
 	if !keepOriginal {
 		if err := os.Remove(fullPath); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to remove original: %v", err)), nil
+			return nil, nil, fmt.Errorf("failed to remove original: %v", err)
 		}
 	}
 
@@ -84,7 +96,11 @@ func (v *Vault) SplitNoteHandler(ctx context.Context, req mcp.CallToolRequest) (
 		sb.WriteString(fmt.Sprintf("\nOriginal note removed: %s", path))
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // section represents a heading section
@@ -149,25 +165,21 @@ func sanitizeFilename(s string) string {
 }
 
 // MergeNotesHandler merges multiple notes into one
-func (v *Vault) MergeNotesHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	pathsStr, err := req.RequireString("paths")
-	if err != nil {
-		return mcp.NewToolResultError("paths is required"), nil
+func (v *Vault) MergeNotesHandler(ctx context.Context, req *mcp.CallToolRequest, args MergeNotesArgs) (*mcp.CallToolResult, any, error) {
+	pathsStr := args.Paths
+	output := args.Output
+	separator := args.Separator
+	deleteOriginals := args.DeleteOriginals
+	addHeadings := args.AddHeadings
+
+	if separator == "" {
+		separator = "\n\n---\n\n"
 	}
 
-	output, err := req.RequireString("output")
-	if err != nil {
-		return mcp.NewToolResultError("output path is required"), nil
-	}
-
-	separator := req.GetString("separator", "\n\n---\n\n")
-	deleteOriginals := req.GetBool("delete_originals", false)
-	addHeadings := req.GetBool("add_headings", true)
-
-	// Parse paths (comma-separated or JSON array)
+	// Parse paths (comma-separated or JSON array) - using parsePaths from bulk.go
 	paths := parsePaths(pathsStr)
 	if len(paths) < 2 {
-		return mcp.NewToolResultError("at least 2 paths are required to merge"), nil
+		return nil, nil, fmt.Errorf("at least 2 paths are required to merge")
 	}
 
 	var contents []string
@@ -179,9 +191,13 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req mcp.CallToolRequest) 
 		}
 
 		fullPath := filepath.Join(v.path, p)
+		if !v.isPathSafe(fullPath) {
+			return nil, nil, fmt.Errorf("path must be within vault: %s", p)
+		}
+
 		content, err := os.ReadFile(fullPath)
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to read %s: %v", p, err)), nil
+			return nil, nil, fmt.Errorf("failed to read %s: %v", p, err)
 		}
 
 		contentStr := string(content)
@@ -206,13 +222,16 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req mcp.CallToolRequest) 
 		output += ".md"
 	}
 	outputFull := filepath.Join(v.path, output)
-	if err := os.MkdirAll(filepath.Dir(outputFull), 0o755); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create directory: %v", err)), nil
+	if !v.isPathSafe(outputFull) {
+		return nil, nil, fmt.Errorf("output path must be within vault")
 	}
 
-	//#nosec G306 -- Obsidian notes need to be readable by the user
-	if err := os.WriteFile(outputFull, []byte(merged), 0o644); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write merged note: %v", err)), nil
+	if err := os.MkdirAll(filepath.Dir(outputFull), 0o755); err != nil {
+		return nil, nil, fmt.Errorf("failed to create directory: %v", err)
+	}
+
+	if err := os.WriteFile(outputFull, []byte(merged), 0o600); err != nil {
+		return nil, nil, fmt.Errorf("failed to write merged note: %v", err)
 	}
 
 	// Delete originals if requested
@@ -237,70 +256,39 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req mcp.CallToolRequest) 
 		}
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
-}
-
-// parsePaths parses a comma-separated or JSON array of paths
-func parsePaths(pathsStr string) []string {
-	pathsStr = strings.TrimSpace(pathsStr)
-
-	// Try JSON array first
-	if strings.HasPrefix(pathsStr, "[") {
-		// Simple JSON array parsing
-		pathsStr = strings.TrimPrefix(pathsStr, "[")
-		pathsStr = strings.TrimSuffix(pathsStr, "]")
-		var paths []string
-		for _, p := range strings.Split(pathsStr, ",") {
-			p = strings.TrimSpace(p)
-			p = strings.Trim(p, "\"'")
-			if p != "" {
-				paths = append(paths, p)
-			}
-		}
-		return paths
-	}
-
-	// Comma-separated
-	var paths []string
-	for _, p := range strings.Split(pathsStr, ",") {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			paths = append(paths, p)
-		}
-	}
-	return paths
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // ExtractSectionHandler extracts a section to a new note
-func (v *Vault) ExtractSectionHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	path, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
-
-	heading, err := req.RequireString("heading")
-	if err != nil {
-		return mcp.NewToolResultError("heading is required"), nil
-	}
-
-	output := req.GetString("output", "")
-	removeFromOriginal := req.GetBool("remove_from_original", true)
-	addLink := req.GetBool("add_link", true)
+func (v *Vault) ExtractSectionHandler(ctx context.Context, req *mcp.CallToolRequest, args ExtractSectionArgs) (*mcp.CallToolResult, any, error) {
+	path := args.Path
+	heading := args.Heading
+	output := args.Output
+	removeFromOriginal := args.RemoveFromOriginal
+	addLink := args.AddLink
 
 	if !strings.HasSuffix(path, ".md") {
 		path += ".md"
 	}
 
 	fullPath := filepath.Join(v.path, path)
-	content, err := os.ReadFile(fullPath)
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+	if !v.isPathSafe(fullPath) {
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
-	// Extract the section
+	content, err := os.ReadFile(fullPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
+	}
+
+	// Extract the section (using extractSection from batch.go)
 	sectionContent := extractSection(string(content), heading)
 	if sectionContent == "" {
-		return mcp.NewToolResultError(fmt.Sprintf("Heading '%s' not found", heading)), nil
+		return nil, nil, fmt.Errorf("heading '%s' not found", heading)
 	}
 
 	// Determine output path
@@ -312,16 +300,19 @@ func (v *Vault) ExtractSectionHandler(ctx context.Context, req mcp.CallToolReque
 	}
 
 	outputFull := filepath.Join(v.path, output)
+	if !v.isPathSafe(outputFull) {
+		return nil, nil, fmt.Errorf("output path must be within vault")
+	}
+
 	if err := os.MkdirAll(filepath.Dir(outputFull), 0o755); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create directory: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to create directory: %v", err)
 	}
 
 	// Create new note with extracted content
 	newContent := fmt.Sprintf("# %s\n\n%s", heading, strings.TrimSpace(sectionContent))
 
-	//#nosec G306 -- Obsidian notes need to be readable by the user
-	if err := os.WriteFile(outputFull, []byte(newContent), 0o644); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write new note: %v", err)), nil
+	if err := os.WriteFile(outputFull, []byte(newContent), 0o600); err != nil {
+		return nil, nil, fmt.Errorf("failed to write new note: %v", err)
 	}
 
 	// Modify original if requested
@@ -336,13 +327,16 @@ func (v *Vault) ExtractSectionHandler(ctx context.Context, req mcp.CallToolReque
 			newOriginal += linkText
 		}
 
-		//#nosec G306 -- Obsidian notes need to be readable by the user
-		if err := os.WriteFile(fullPath, []byte(newOriginal), 0o644); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to update original: %v", err)), nil
+		if err := os.WriteFile(fullPath, []byte(newOriginal), 0o600); err != nil {
+			return nil, nil, fmt.Errorf("failed to update original: %v", err)
 		}
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Extracted section '%s' to %s", heading, output)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Extracted section '%s' to %s", heading, output)},
+		},
+	}, nil, nil
 }
 
 // removeSectionFromContent removes a section from content
@@ -386,22 +380,23 @@ func removeSectionFromContent(content, heading string) string {
 }
 
 // DuplicateNoteHandler duplicates a note
-func (v *Vault) DuplicateNoteHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	path, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
-
-	output := req.GetString("output", "")
+func (v *Vault) DuplicateNoteHandler(ctx context.Context, req *mcp.CallToolRequest, args DuplicateNoteArgs) (*mcp.CallToolResult, any, error) {
+	path := args.Path
+	output := args.Output
 
 	if !strings.HasSuffix(path, ".md") {
 		path += ".md"
 	}
 
 	fullPath := filepath.Join(v.path, path)
+
+	if !v.isPathSafe(fullPath) {
+		return nil, nil, fmt.Errorf("path must be within vault")
+	}
+
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	// Determine output path
@@ -415,20 +410,26 @@ func (v *Vault) DuplicateNoteHandler(ctx context.Context, req mcp.CallToolReques
 	}
 
 	outputFull := filepath.Join(v.path, output)
+	if !v.isPathSafe(outputFull) {
+		return nil, nil, fmt.Errorf("output path must be within vault")
+	}
 
 	// Check if output already exists
 	if _, err := os.Stat(outputFull); err == nil {
-		return mcp.NewToolResultError(fmt.Sprintf("File already exists: %s", output)), nil
+		return nil, nil, fmt.Errorf("file already exists: %s", output)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(outputFull), 0o755); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create directory: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to create directory: %v", err)
 	}
 
-	//#nosec G306 -- Obsidian notes need to be readable by the user
-	if err := os.WriteFile(outputFull, content, 0o644); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to write duplicate: %v", err)), nil
+	if err := os.WriteFile(outputFull, content, 0o600); err != nil {
+		return nil, nil, fmt.Errorf("failed to write duplicate: %v", err)
 	}
 
-	return mcp.NewToolResultText(fmt.Sprintf("Duplicated %s to %s", path, output)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Duplicated %s to %s", path, output)},
+		},
+	}, nil, nil
 }

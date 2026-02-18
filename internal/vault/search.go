@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // SearchResult represents a search match
@@ -18,23 +18,23 @@ type SearchResult struct {
 }
 
 // SearchVaultHandler searches for content in vault notes
-func (v *Vault) SearchVaultHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	query, err := req.RequireString("query")
-	if err != nil {
-		return mcp.NewToolResultError("query is required"), nil
-	}
-
-	dir := req.GetString("directory", "")
+func (v *Vault) SearchVaultHandler(ctx context.Context, req *mcp.CallToolRequest, args SearchArgs) (*mcp.CallToolResult, any, error) {
+	query := args.Query
+	dir := args.Directory
 
 	searchPath := v.path
 	if dir != "" {
 		searchPath = filepath.Join(v.path, dir)
 	}
 
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
+
 	queryLower := strings.ToLower(query)
 	var results []SearchResult
 
-	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -63,11 +63,15 @@ func (v *Vault) SearchVaultHandler(ctx context.Context, req mcp.CallToolRequest)
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Search failed: %v", err)), nil
+		return nil, nil, fmt.Errorf("search failed: %v", err)
 	}
 
 	if len(results) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No matches found for: %s", query)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No matches found for: %s", query)},
+			},
+		}, nil, nil
 	}
 
 	var sb strings.Builder
@@ -85,7 +89,11 @@ func (v *Vault) SearchVaultHandler(ctx context.Context, req mcp.CallToolRequest)
 		sb.WriteString(fmt.Sprintf("  L%d: %s\n", r.Line, truncate(r.Content, 100)))
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 func truncate(s string, maxLen int) string {

@@ -8,15 +8,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // ForwardLinksHandler shows outgoing links from a note
-func (v *Vault) ForwardLinksHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	notePath, err := req.RequireString("path")
-	if err != nil {
-		return mcp.NewToolResultError("path is required"), nil
-	}
+func (v *Vault) ForwardLinksHandler(ctx context.Context, req *mcp.CallToolRequest, args ForwardLinksArgs) (*mcp.CallToolResult, any, error) {
+	notePath := args.Path
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
@@ -24,21 +21,25 @@ func (v *Vault) ForwardLinksHandler(ctx context.Context, req mcp.CallToolRequest
 
 	fullPath := filepath.Join(v.path, notePath)
 	if !v.isPathSafe(fullPath) {
-		return mcp.NewToolResultError("path must be within vault"), nil
+		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return mcp.NewToolResultError(fmt.Sprintf("Note not found: %s", notePath)), nil
+			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to read note: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to read note: %v", err)
 	}
 
 	links := ExtractWikilinks(string(content))
 
 	if len(links) == 0 {
-		return mcp.NewToolResultText(fmt.Sprintf("No outgoing links found in: %s", notePath)), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("No outgoing links found in: %s", notePath)},
+			},
+		}, nil, nil
 	}
 
 	// Check which links exist
@@ -70,7 +71,11 @@ func (v *Vault) ForwardLinksHandler(ctx context.Context, req mcp.CallToolRequest
 		}
 	}
 
-	return mcp.NewToolResultText(sb.String()), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: sb.String()},
+		},
+	}, nil, nil
 }
 
 // noteLinks represents a note and its link relationships
@@ -213,9 +218,9 @@ func (g *linkGraph) formatOrphanResult(result orphanResult, includeDeadEnds bool
 }
 
 // OrphanNotesHandler finds notes with no incoming or outgoing links
-func (v *Vault) OrphanNotesHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	dir := req.GetString("directory", "")
-	includeDeadEnds := req.GetBool("include_no_outgoing", false)
+func (v *Vault) OrphanNotesHandler(ctx context.Context, req *mcp.CallToolRequest, args OrphanNotesArgs) (*mcp.CallToolResult, any, error) {
+	dir := args.Directory
+	includeDeadEnds := args.IncludeDeadEnds
 
 	searchPath := v.path
 	if dir != "" {
@@ -224,13 +229,17 @@ func (v *Vault) OrphanNotesHandler(ctx context.Context, req mcp.CallToolRequest)
 
 	graph, err := v.buildLinkGraph(searchPath)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to scan vault: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to scan vault: %v", err)
 	}
 
 	result := graph.findOrphans(includeDeadEnds)
 	output := graph.formatOrphanResult(result, includeDeadEnds)
 
-	return mcp.NewToolResultText(output), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: output},
+		},
+	}, nil, nil
 }
 
 // brokenLink represents a wikilink that doesn't resolve
@@ -311,8 +320,8 @@ func formatBrokenLinks(broken []brokenLink) string {
 }
 
 // BrokenLinksHandler finds wikilinks pointing to non-existent notes
-func (v *Vault) BrokenLinksHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	dir := req.GetString("directory", "")
+func (v *Vault) BrokenLinksHandler(ctx context.Context, req *mcp.CallToolRequest, args BrokenLinksArgs) (*mcp.CallToolResult, any, error) {
+	dir := args.Directory
 
 	searchPath := v.path
 	if dir != "" {
@@ -321,7 +330,7 @@ func (v *Vault) BrokenLinksHandler(ctx context.Context, req mcp.CallToolRequest)
 
 	existing, err := v.buildExistingNotesSet()
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to scan vault: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to scan vault: %v", err)
 	}
 
 	var broken []brokenLink
@@ -339,10 +348,14 @@ func (v *Vault) BrokenLinksHandler(ctx context.Context, req mcp.CallToolRequest)
 	})
 
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to scan for broken links: %v", err)), nil
+		return nil, nil, fmt.Errorf("failed to scan for broken links: %v", err)
 	}
 
-	return mcp.NewToolResultText(formatBrokenLinks(broken)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: formatBrokenLinks(broken)},
+		},
+	}, nil, nil
 }
 
 // noteExists checks if a note exists (handles path normalization)
