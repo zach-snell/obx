@@ -96,3 +96,130 @@ func TestSearchVaultHandlerModeSwitch(t *testing.T) {
 		}
 	})
 }
+
+func TestSearchAdvancedHandlerModeSwitch(t *testing.T) {
+	ctx := context.Background()
+	v, dir := setupTestVault(t)
+
+	writeTestFile(t, dir, "alpha.md", "hello world")
+	writeTestFile(t, dir, "beta.md", "hello again")
+
+	t.Run("compact default", func(t *testing.T) {
+		result, _, err := v.SearchAdvancedHandler(ctx, nil, SearchAdvancedArgs{Query: "hello"})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		text := result.Content[0].(*mcp.TextContent).Text
+		var payload map[string]any
+		if err := json.Unmarshal([]byte(text), &payload); err != nil {
+			t.Fatalf("expected compact JSON response, got: %s", text)
+		}
+		if payload["mode"] != modeCompact {
+			t.Fatalf("expected mode %q, got %v", modeCompact, payload["mode"])
+		}
+	})
+
+	t.Run("detailed mode", func(t *testing.T) {
+		result, _, err := v.SearchAdvancedHandler(ctx, nil, SearchAdvancedArgs{
+			Query: "hello",
+			Mode:  modeDetailed,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		text := result.Content[0].(*mcp.TextContent).Text
+		if strings.HasPrefix(text, "{") {
+			t.Fatalf("expected detailed text response, got JSON: %s", text)
+		}
+		if !strings.Contains(text, `Found 2 matches for "hello"`) {
+			t.Fatalf("unexpected detailed response: %s", text)
+		}
+	})
+}
+
+func TestSearchRegexHandlerModeSwitch(t *testing.T) {
+	ctx := context.Background()
+	v, dir := setupTestVault(t)
+
+	writeTestFile(t, dir, "alpha.md", "task-123")
+	writeTestFile(t, dir, "beta.md", "task-456")
+
+	t.Run("compact default", func(t *testing.T) {
+		result, _, err := v.SearchRegexHandler(ctx, nil, SearchRegexArgs{Pattern: `task-\d+`})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		text := result.Content[0].(*mcp.TextContent).Text
+		var payload map[string]any
+		if err := json.Unmarshal([]byte(text), &payload); err != nil {
+			t.Fatalf("expected compact JSON response, got: %s", text)
+		}
+		if payload["mode"] != modeCompact {
+			t.Fatalf("expected mode %q, got %v", modeCompact, payload["mode"])
+		}
+	})
+
+	t.Run("detailed mode", func(t *testing.T) {
+		result, _, err := v.SearchRegexHandler(ctx, nil, SearchRegexArgs{
+			Pattern: `task-\d+`,
+			Mode:    modeDetailed,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		text := result.Content[0].(*mcp.TextContent).Text
+		if strings.HasPrefix(text, "{") {
+			t.Fatalf("expected detailed text response, got JSON: %s", text)
+		}
+		if !strings.Contains(text, "Found 2 matches") {
+			t.Fatalf("unexpected detailed response: %s", text)
+		}
+	})
+}
+
+func TestListTasksHandlerModeSwitch(t *testing.T) {
+	ctx := context.Background()
+	v, dir := setupTestVault(t)
+
+	writeTestFile(t, dir, "tasks.md", "- [ ] one\n- [x] two")
+
+	t.Run("compact default", func(t *testing.T) {
+		result, _, err := v.ListTasksHandler(ctx, nil, ListTasksArgs{})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		text := result.Content[0].(*mcp.TextContent).Text
+		var payload map[string]any
+		if err := json.Unmarshal([]byte(text), &payload); err != nil {
+			t.Fatalf("expected compact JSON response, got: %s", text)
+		}
+		if payload["mode"] != modeCompact {
+			t.Fatalf("expected mode %q, got %v", modeCompact, payload["mode"])
+		}
+
+		data := payload["data"].(map[string]any)
+		if int(data["total_tasks"].(float64)) != 2 {
+			t.Fatalf("expected total_tasks 2, got %v", data["total_tasks"])
+		}
+	})
+
+	t.Run("detailed mode", func(t *testing.T) {
+		result, _, err := v.ListTasksHandler(ctx, nil, ListTasksArgs{Mode: modeDetailed})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		text := result.Content[0].(*mcp.TextContent).Text
+		if strings.HasPrefix(text, "{") {
+			t.Fatalf("expected detailed text response, got JSON: %s", text)
+		}
+		if !strings.Contains(text, "Found 2 tasks") {
+			t.Fatalf("unexpected detailed response: %s", text)
+		}
+	})
+}

@@ -114,6 +114,7 @@ type SearchAdvancedArgs struct {
 	Operator  string `json:"operator,omitempty" jsonschema:"Logical operator: 'and' (default), 'or'"`
 	Directory string `json:"directory,omitempty" jsonschema:"Directory to limit search to"`
 	Limit     int    `json:"limit,omitempty" jsonschema:"Maximum results to return (default 50)"`
+	Mode      string `json:"mode,omitempty" jsonschema:"Response mode: compact (default) or detailed"`
 }
 
 // SearchDateArgs arguments for search-date
@@ -131,6 +132,7 @@ type SearchRegexArgs struct {
 	Directory       string `json:"directory,omitempty" jsonschema:"Directory to limit search to"`
 	Limit           int    `json:"limit,omitempty" jsonschema:"Maximum results to return (default 50)"`
 	CaseInsensitive bool   `json:"case_insensitive,omitempty" jsonschema:"Whether to ignore case (default true)"`
+	Mode            string `json:"mode,omitempty" jsonschema:"Response mode: compact (default) or detailed"`
 }
 
 // --- Tasks ---
@@ -139,6 +141,8 @@ type SearchRegexArgs struct {
 type ListTasksArgs struct {
 	Status    string `json:"status,omitempty" jsonschema:"Filter by status: 'all' (default), 'open', 'completed'"`
 	Directory string `json:"directory,omitempty" jsonschema:"Directory to limit search to"`
+	Limit     int    `json:"limit,omitempty" jsonschema:"Maximum tasks to return (default: all in detailed mode, 100 in compact mode)"`
+	Mode      string `json:"mode,omitempty" jsonschema:"Response mode: compact (default) or detailed"`
 }
 
 // ToggleTaskArgs arguments for toggle-task
