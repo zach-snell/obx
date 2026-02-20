@@ -86,10 +86,25 @@ The server will be auto-discovered, or add to your config:
 </details>
 
 <details>
+<summary><b>HTTP Streamable Transport</b></summary>
+
+Run as an HTTP server for remote access or multi-client setups:
+
+```bash
+# Start HTTP server on port 8080
+obsidian-mcp /path/to/vault --http :8080
+# or via env var
+OBSIDIAN_ADDR=:8080 obsidian-mcp /path/to/vault
+```
+
+Then configure your MCP client to connect to `http://localhost:8080/mcp`.
+</details>
+
+<details>
 <summary><b>Other MCP Clients</b></summary>
 
 ```bash
-# Run directly (communicates via stdio)
+# Run directly (communicates via stdio, default)
 ./obsidian-mcp /path/to/vault
 ```
 </details>

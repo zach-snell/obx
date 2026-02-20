@@ -288,6 +288,38 @@ func (v *Vault) SearchDateHandler(ctx context.Context, req *mcp.CallToolRequest,
 	}, nil, nil
 }
 
+// collectRegexMatches walks searchPath and returns all lines matching re.
+func (v *Vault) collectRegexMatches(re *regexp.Regexp, searchPath string) ([]SearchResult, error) {
+	var results []SearchResult
+
+	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
+			return nil
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+
+		lines := strings.Split(string(content), "\n")
+		relPath, _ := filepath.Rel(v.path, path)
+
+		for i, line := range lines {
+			if re.MatchString(line) {
+				results = append(results, SearchResult{
+					File:    relPath,
+					Line:    i + 1,
+					Content: strings.TrimSpace(line),
+				})
+			}
+		}
+		return nil
+	})
+
+	return results, err
+}
+
 // SearchRegexHandler searches using regex
 func (v *Vault) SearchRegexHandler(ctx context.Context, req *mcp.CallToolRequest, args SearchRegexArgs) (*mcp.CallToolResult, any, error) {
 	pattern := args.Pattern
@@ -318,34 +350,7 @@ func (v *Vault) SearchRegexHandler(ctx context.Context, req *mcp.CallToolRequest
 		return nil, nil, fmt.Errorf("search path must be within vault")
 	}
 
-	var results []SearchResult
-
-	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return nil
-		}
-
-		lines := strings.Split(string(content), "\n")
-		relPath, _ := filepath.Rel(v.path, path)
-
-		for i, line := range lines {
-			if re.MatchString(line) {
-				results = append(results, SearchResult{
-					File:    relPath,
-					Line:    i + 1,
-					Content: strings.TrimSpace(line),
-				})
-				// Limit matches per file? No, maybe all matches.
-			}
-		}
-		return nil
-	})
-
+	results, err := v.collectRegexMatches(re, searchPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("search failed: %v", err)
 	}

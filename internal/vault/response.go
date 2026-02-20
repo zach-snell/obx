@@ -32,7 +32,7 @@ func isDetailedMode(mode string) bool {
 	return normalizeMode(mode) == modeDetailed
 }
 
-func compactResult(summary string, truncated bool, data map[string]any, next map[string]any) (*mcp.CallToolResult, any, error) {
+func compactResult(summary string, truncated bool, data, next map[string]any) (*mcp.CallToolResult, any, error) {
 	response := compactResponse{
 		Status:    "ok",
 		Mode:      modeCompact,

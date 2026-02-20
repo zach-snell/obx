@@ -38,8 +38,23 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
     }
     ```
   </TabItem>
+  <TabItem label="HTTP Streamable">
+    Run as an HTTP server for remote access or multi-client setups:
+
+    ```bash
+    obsidian-mcp /path/to/your/vault --http :8080
+    ```
+
+    Or via environment variable:
+
+    ```bash
+    OBSIDIAN_ADDR=:8080 obsidian-mcp /path/to/your/vault
+    ```
+
+    Then point your MCP client to `http://localhost:8080/mcp`.
+  </TabItem>
   <TabItem label="Other Clients">
-    The server communicates via stdio. Run it directly:
+    The server communicates via stdio by default. Run it directly:
 
     ```bash
     obsidian-mcp /path/to/your/vault
