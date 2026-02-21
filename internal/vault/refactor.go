@@ -63,27 +63,9 @@ func (v *Vault) ExtractNoteHandler(ctx context.Context, req *mcp.CallToolRequest
 		}
 	}
 
-	var created []string
-	for _, section := range sections {
-		if section.title == "" {
-			continue // Skip preamble without title
-		}
-
-		// Create sanitized filename from title
-		filename := sanitizeFilename(section.title) + ".md"
-		newPath := filepath.Join(outputDirFull, filename)
-
-		// Add frontmatter if extracting
-		newContent := fmt.Sprintf("# %s\n\n%s", section.title, strings.TrimSpace(section.content))
-
-		if !dryRun {
-			if err := os.WriteFile(newPath, []byte(newContent), 0o600); err != nil {
-				return nil, nil, fmt.Errorf("failed to write %s: %v", filename, err)
-			}
-		}
-
-		relPath, _ := filepath.Rel(v.path, newPath)
-		created = append(created, relPath)
+	created, err := v.writeSplitSections(sections, outputDirFull, dryRun)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if !keepOriginal {
@@ -116,6 +98,27 @@ func (v *Vault) ExtractNoteHandler(ctx context.Context, req *mcp.CallToolRequest
 			&mcp.TextContent{Text: sb.String()},
 		},
 	}, nil, nil
+}
+
+// writeSplitSections writes each titled section to its own file and returns the created paths.
+func (v *Vault) writeSplitSections(sections []section, outputDir string, dryRun bool) ([]string, error) {
+	var created []string
+	for _, sec := range sections {
+		if sec.title == "" {
+			continue
+		}
+		filename := sanitizeFilename(sec.title) + ".md"
+		newPath := filepath.Join(outputDir, filename)
+		newContent := fmt.Sprintf("# %s\n\n%s", sec.title, strings.TrimSpace(sec.content))
+		if !dryRun {
+			if err := os.WriteFile(newPath, []byte(newContent), 0o600); err != nil {
+				return nil, fmt.Errorf("failed to write %s: %v", filename, err)
+			}
+		}
+		relPath, _ := filepath.Rel(v.path, newPath)
+		created = append(created, relPath)
+	}
+	return created, nil
 }
 
 // section represents a heading section
@@ -198,36 +201,9 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, nil, fmt.Errorf("at least 2 paths are required to merge")
 	}
 
-	var contents []string
-	var validPaths []string
-
-	for _, p := range paths {
-		if !strings.HasSuffix(p, ".md") {
-			p += ".md"
-		}
-
-		fullPath := filepath.Join(v.path, p)
-		if !v.isPathSafe(fullPath) {
-			return nil, nil, fmt.Errorf("path must be within vault: %s", p)
-		}
-
-		content, err := os.ReadFile(fullPath)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to read %s: %v", p, err)
-		}
-
-		contentStr := string(content)
-
-		if addHeadings {
-			// Add the filename as a heading if it doesn't start with one
-			name := strings.TrimSuffix(filepath.Base(p), ".md")
-			if !strings.HasPrefix(strings.TrimSpace(contentStr), "#") {
-				contentStr = fmt.Sprintf("## %s\n\n%s", name, contentStr)
-			}
-		}
-
-		contents = append(contents, strings.TrimSpace(contentStr))
-		validPaths = append(validPaths, p)
+	contents, validPaths, err := v.readMergeContents(paths, addHeadings)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// Combine contents
@@ -289,6 +265,33 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req *mcp.CallToolRequest,
 			&mcp.TextContent{Text: sb.String()},
 		},
 	}, nil, nil
+}
+
+// readMergeContents reads and prepares note contents for merging.
+func (v *Vault) readMergeContents(paths []string, addHeadings bool) (contents, validPaths []string, err error) {
+	for _, p := range paths {
+		if !strings.HasSuffix(p, ".md") {
+			p += ".md"
+		}
+		fullPath := filepath.Join(v.path, p)
+		if !v.isPathSafe(fullPath) {
+			return nil, nil, fmt.Errorf("path must be within vault: %s", p)
+		}
+		data, readErr := os.ReadFile(fullPath)
+		if readErr != nil {
+			return nil, nil, fmt.Errorf("failed to read %s: %v", p, readErr)
+		}
+		contentStr := string(data)
+		if addHeadings {
+			name := strings.TrimSuffix(filepath.Base(p), ".md")
+			if !strings.HasPrefix(strings.TrimSpace(contentStr), "#") {
+				contentStr = fmt.Sprintf("## %s\n\n%s", name, contentStr)
+			}
+		}
+		contents = append(contents, strings.TrimSpace(contentStr))
+		validPaths = append(validPaths, p)
+	}
+	return contents, validPaths, nil
 }
 
 // ExtractSectionHandler extracts a section to a new note

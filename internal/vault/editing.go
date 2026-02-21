@@ -319,20 +319,13 @@ func (v *Vault) AppendNoteHandler(ctx context.Context, req *mcp.CallToolRequest,
 
 	// Create if not exists (only for default append or simple path)
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-		if expectedMtime != "" {
-			return nil, nil, fmt.Errorf("target does not exist for expected_mtime check")
+		result, createErr := createNewNote(fullPath, notePath, content, expectedMtime)
+		if createErr != nil {
+			return nil, nil, createErr
 		}
-		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
-			return nil, nil, fmt.Errorf("failed to create directory: %v", err)
+		if result != nil {
+			return result, nil, nil
 		}
-		if err := os.WriteFile(fullPath, []byte(content), 0o600); err != nil {
-			return nil, nil, fmt.Errorf("failed to write note: %v", err)
-		}
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Created new note: %s", notePath)},
-			},
-		}, nil, nil
 	}
 
 	fileContent, err := os.ReadFile(fullPath)
@@ -434,6 +427,25 @@ func buildFinalLines(lines, newLines []string, insertIndex int, insertMode strin
 	result = append(result, newLines...)
 	result = append(result, lines[insertIndex:]...)
 	return result
+}
+
+// createNewNote handles the "file doesn't exist" path for AppendNoteHandler.
+// Returns a result if the note was created, or nil if the caller should continue.
+func createNewNote(fullPath, notePath, content, expectedMtime string) (*mcp.CallToolResult, error) {
+	if expectedMtime != "" {
+		return nil, fmt.Errorf("target does not exist for expected_mtime check")
+	}
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create directory: %v", err)
+	}
+	if err := os.WriteFile(fullPath, []byte(content), 0o600); err != nil {
+		return nil, fmt.Errorf("failed to write note: %v", err)
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Created new note: %s", notePath)},
+		},
+	}, nil
 }
 
 // findTargetLine finds the line index matching the target string (heading or text)
