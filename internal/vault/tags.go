@@ -92,6 +92,9 @@ func (v *Vault) SearchByTagsHandler(ctx context.Context, req *mcp.CallToolReques
 	if dir != "" {
 		searchPath = filepath.Join(v.path, dir)
 	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
 
 	type result struct {
 		path string

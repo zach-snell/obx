@@ -64,6 +64,9 @@ func (v *Vault) ListDailyNotesHandler(ctx context.Context, req *mcp.CallToolRequ
 	if folder != "" {
 		searchPath = filepath.Join(v.path, folder)
 	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
 
 	type noteInfo struct {
 		path    string

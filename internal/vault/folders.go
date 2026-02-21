@@ -20,6 +20,9 @@ func (v *Vault) ListFoldersHandler(ctx context.Context, req *mcp.CallToolRequest
 	if dir != "" {
 		searchPath = filepath.Join(v.path, dir)
 	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
 
 	type folderInfo struct {
 		path      string
@@ -136,6 +139,7 @@ func (v *Vault) MoveNoteHandler(ctx context.Context, req *mcp.CallToolRequest, a
 	sourcePath := args.Source
 	destPath := args.Destination
 	updateLinks := args.UpdateLinks
+	dryRun := args.DryRun
 
 	// Ensure .md extension
 	if !strings.HasSuffix(sourcePath, ".md") {
@@ -169,20 +173,30 @@ func (v *Vault) MoveNoteHandler(ctx context.Context, req *mcp.CallToolRequest, a
 	}
 
 	var updatedFiles int
-	if updateLinks {
+	if updateLinks && !dryRun {
 		updatedFiles = v.updateLinksForMove(sourcePath, destPath)
 	}
 
-	// Move the file
-	if err := os.Rename(sourceFullPath, destFullPath); err != nil {
-		return nil, nil, fmt.Errorf("failed to move note: %v", err)
+	if !dryRun {
+		// Move the file
+		if err := os.Rename(sourceFullPath, destFullPath); err != nil {
+			return nil, nil, fmt.Errorf("failed to move note: %v", err)
+		}
 	}
 
 	var result string
 	if updateLinks {
-		result = fmt.Sprintf("Moved %s → %s\nUpdated links in %d files", sourcePath, destPath, updatedFiles)
+		if dryRun {
+			result = fmt.Sprintf("Dry run: would move %s → %s\nWould update links in %d files", sourcePath, destPath, updatedFiles)
+		} else {
+			result = fmt.Sprintf("Moved %s → %s\nUpdated links in %d files", sourcePath, destPath, updatedFiles)
+		}
 	} else {
-		result = fmt.Sprintf("Moved %s → %s", sourcePath, destPath)
+		if dryRun {
+			result = fmt.Sprintf("Dry run: would move %s → %s", sourcePath, destPath)
+		} else {
+			result = fmt.Sprintf("Moved %s → %s", sourcePath, destPath)
+		}
 	}
 
 	return &mcp.CallToolResult{
@@ -241,6 +255,7 @@ func (v *Vault) updateLinksForMove(oldPath, newPath string) int {
 func (v *Vault) DeleteFolderHandler(ctx context.Context, req *mcp.CallToolRequest, args DeleteDirArgs) (*mcp.CallToolResult, any, error) {
 	folderPath := args.Path
 	force := args.Force
+	dryRun := args.DryRun
 
 	fullPath := filepath.Join(v.path, folderPath)
 
@@ -264,6 +279,18 @@ func (v *Vault) DeleteFolderHandler(ctx context.Context, req *mcp.CallToolReques
 
 	if len(entries) > 0 && !force {
 		return nil, nil, fmt.Errorf("folder not empty: %s (use force=true to delete anyway)", folderPath)
+	}
+
+	if dryRun {
+		action := "delete folder"
+		if force {
+			action = "delete folder and contents"
+		}
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Dry run: would %s: %s", action, folderPath)},
+			},
+		}, nil, nil
 	}
 
 	if force {

@@ -41,6 +41,7 @@ func (v *Vault) SearchAdvancedHandler(ctx context.Context, req *mcp.CallToolRequ
 	searchIn := args.SearchIn
 	operator := args.Operator
 	limit := args.Limit
+	mode := normalizeMode(args.Mode)
 
 	if searchIn == "" {
 		searchIn = "content"
@@ -91,6 +92,20 @@ func (v *Vault) SearchAdvancedHandler(ctx context.Context, req *mcp.CallToolRequ
 	}
 
 	if len(results) == 0 {
+		if !isDetailedMode(mode) {
+			return compactResult(
+				fmt.Sprintf("No matches found for: %s", args.Query),
+				false,
+				map[string]any{
+					"query":         args.Query,
+					"search_in":     searchIn,
+					"operator":      operator,
+					"total_matches": 0,
+					"matches":       []SearchResult{},
+				},
+				nil,
+			)
+		}
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				&mcp.TextContent{Text: fmt.Sprintf("No matches found for: %s", args.Query)},
@@ -98,8 +113,42 @@ func (v *Vault) SearchAdvancedHandler(ctx context.Context, req *mcp.CallToolRequ
 		}, nil, nil
 	}
 
-	if len(results) > limit {
+	totalMatches := len(results)
+	truncated := false
+	if totalMatches > limit {
 		results = results[:limit]
+		truncated = true
+	}
+
+	if !isDetailedMode(mode) {
+		next := map[string]any(nil)
+		if truncated {
+			next = map[string]any{
+				"tool": "search-advanced",
+				"args": map[string]any{
+					"query":     args.Query,
+					"in":        searchIn,
+					"operator":  operator,
+					"directory": args.Directory,
+					"limit":     limit,
+					"mode":      modeDetailed,
+				},
+			}
+		}
+
+		return compactResult(
+			fmt.Sprintf("Found %d matches for %q", totalMatches, args.Query),
+			truncated,
+			map[string]any{
+				"query":         args.Query,
+				"search_in":     searchIn,
+				"operator":      operator,
+				"total_matches": totalMatches,
+				"returned":      len(results),
+				"matches":       results,
+			},
+			next,
+		)
 	}
 
 	return &mcp.CallToolResult{
@@ -239,12 +288,45 @@ func (v *Vault) SearchDateHandler(ctx context.Context, req *mcp.CallToolRequest,
 	}, nil, nil
 }
 
+// collectRegexMatches walks searchPath and returns all lines matching re.
+func (v *Vault) collectRegexMatches(re *regexp.Regexp, searchPath string) ([]SearchResult, error) {
+	var results []SearchResult
+
+	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
+			return nil
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+
+		lines := strings.Split(string(content), "\n")
+		relPath, _ := filepath.Rel(v.path, path)
+
+		for i, line := range lines {
+			if re.MatchString(line) {
+				results = append(results, SearchResult{
+					File:    relPath,
+					Line:    i + 1,
+					Content: strings.TrimSpace(line),
+				})
+			}
+		}
+		return nil
+	})
+
+	return results, err
+}
+
 // SearchRegexHandler searches using regex
 func (v *Vault) SearchRegexHandler(ctx context.Context, req *mcp.CallToolRequest, args SearchRegexArgs) (*mcp.CallToolResult, any, error) {
 	pattern := args.Pattern
 	dir := args.Directory
 	limit := args.Limit
 	caseInsensitive := args.CaseInsensitive
+	mode := normalizeMode(args.Mode)
 
 	if limit <= 0 {
 		limit = 50
@@ -268,39 +350,24 @@ func (v *Vault) SearchRegexHandler(ctx context.Context, req *mcp.CallToolRequest
 		return nil, nil, fmt.Errorf("search path must be within vault")
 	}
 
-	var results []SearchResult
-
-	err = filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return nil
-		}
-
-		lines := strings.Split(string(content), "\n")
-		relPath, _ := filepath.Rel(v.path, path)
-
-		for i, line := range lines {
-			if re.MatchString(line) {
-				results = append(results, SearchResult{
-					File:    relPath,
-					Line:    i + 1,
-					Content: strings.TrimSpace(line),
-				})
-				// Limit matches per file? No, maybe all matches.
-			}
-		}
-		return nil
-	})
-
+	results, err := v.collectRegexMatches(re, searchPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("search failed: %v", err)
 	}
 
 	if len(results) == 0 {
+		if !isDetailedMode(mode) {
+			return compactResult(
+				fmt.Sprintf("No matches found for: %s", pattern),
+				false,
+				map[string]any{
+					"pattern":       pattern,
+					"total_matches": 0,
+					"matches":       []SearchResult{},
+				},
+				nil,
+			)
+		}
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				&mcp.TextContent{Text: fmt.Sprintf("No matches found for: %s", pattern)},
@@ -308,8 +375,39 @@ func (v *Vault) SearchRegexHandler(ctx context.Context, req *mcp.CallToolRequest
 		}, nil, nil
 	}
 
-	if limit > 0 && len(results) > limit {
+	totalMatches := len(results)
+	truncated := false
+	if limit > 0 && totalMatches > limit {
 		results = results[:limit]
+		truncated = true
+	}
+
+	if !isDetailedMode(mode) {
+		next := map[string]any(nil)
+		if truncated {
+			next = map[string]any{
+				"tool": "search-regex",
+				"args": map[string]any{
+					"pattern":          pattern,
+					"directory":        dir,
+					"limit":            limit,
+					"case_insensitive": caseInsensitive,
+					"mode":             modeDetailed,
+				},
+			}
+		}
+
+		return compactResult(
+			fmt.Sprintf("Found %d matches for %s", totalMatches, pattern),
+			truncated,
+			map[string]any{
+				"pattern":       pattern,
+				"total_matches": totalMatches,
+				"returned":      len(results),
+				"matches":       results,
+			},
+			next,
+		)
 	}
 
 	var sb strings.Builder

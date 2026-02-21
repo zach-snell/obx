@@ -115,6 +115,7 @@ func (v *Vault) SetInlineFieldHandler(ctx context.Context, req *mcp.CallToolRequ
 	notePath := args.Path
 	key := args.Key
 	value := args.Value
+	expectedMtime := args.ExpectedMtime
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
@@ -131,6 +132,9 @@ func (v *Vault) SetInlineFieldHandler(ctx context.Context, req *mcp.CallToolRequ
 			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
 		return nil, nil, fmt.Errorf("failed to read note: %v", err)
+	}
+	if err := ensureExpectedMtime(fullPath, expectedMtime); err != nil {
+		return nil, nil, err
 	}
 
 	contentStr := string(content)
@@ -193,6 +197,9 @@ func (v *Vault) searchInlineFields(dir string, query *inlineFieldQuery) ([]inlin
 	searchPath := v.path
 	if dir != "" {
 		searchPath = filepath.Join(v.path, dir)
+	}
+	if !v.isPathSafe(searchPath) {
+		return nil, fmt.Errorf("search path must be within vault")
 	}
 
 	var results []inlineFieldResult

@@ -226,6 +226,9 @@ func (v *Vault) OrphanNotesHandler(ctx context.Context, req *mcp.CallToolRequest
 	if dir != "" {
 		searchPath = filepath.Join(v.path, dir)
 	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
 
 	graph, err := v.buildLinkGraph(searchPath)
 	if err != nil {
@@ -326,6 +329,9 @@ func (v *Vault) BrokenLinksHandler(ctx context.Context, req *mcp.CallToolRequest
 	searchPath := v.path
 	if dir != "" {
 		searchPath = filepath.Join(v.path, dir)
+	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
 	}
 
 	existing, err := v.buildExistingNotesSet()

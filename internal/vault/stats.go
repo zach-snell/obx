@@ -135,6 +135,9 @@ func (v *Vault) VaultStatsHandler(ctx context.Context, req *mcp.CallToolRequest,
 	if dir != "" {
 		searchPath = filepath.Join(v.path, dir)
 	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
 
 	stats := &vaultStats{
 		totalTags: make(map[string]int),

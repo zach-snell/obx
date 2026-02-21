@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -17,10 +18,13 @@ type SearchResult struct {
 	Content string
 }
 
+const compactSearchResultLimit = 50
+
 // SearchVaultHandler searches for content in vault notes
 func (v *Vault) SearchVaultHandler(ctx context.Context, req *mcp.CallToolRequest, args SearchArgs) (*mcp.CallToolResult, any, error) {
 	query := args.Query
 	dir := args.Directory
+	mode := normalizeMode(args.Mode)
 
 	searchPath := v.path
 	if dir != "" {
@@ -33,6 +37,7 @@ func (v *Vault) SearchVaultHandler(ctx context.Context, req *mcp.CallToolRequest
 
 	queryLower := strings.ToLower(query)
 	var results []SearchResult
+	filesScanned := 0
 
 	err := filepath.Walk(searchPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -46,6 +51,7 @@ func (v *Vault) SearchVaultHandler(ctx context.Context, req *mcp.CallToolRequest
 		if err != nil {
 			return nil
 		}
+		filesScanned++
 
 		lines := strings.Split(string(content), "\n")
 		relPath, _ := filepath.Rel(v.path, path)
@@ -67,11 +73,66 @@ func (v *Vault) SearchVaultHandler(ctx context.Context, req *mcp.CallToolRequest
 	}
 
 	if len(results) == 0 {
+		if !isDetailedMode(mode) {
+			return compactResult(
+				fmt.Sprintf("No matches found for: %s", query),
+				false,
+				map[string]any{
+					"query":         query,
+					"files_scanned": filesScanned,
+					"total_matches": 0,
+					"matches":       []SearchResult{},
+				},
+				nil,
+			)
+		}
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				&mcp.TextContent{Text: fmt.Sprintf("No matches found for: %s", query)},
 			},
 		}, nil, nil
+	}
+
+	if !isDetailedMode(mode) {
+		limited := results
+		truncated := false
+		if len(limited) > compactSearchResultLimit {
+			limited = limited[:compactSearchResultLimit]
+			truncated = true
+		}
+
+		// Keep grouped presentation stable by sorting on file then line in compact mode.
+		sort.Slice(limited, func(i, j int) bool {
+			if limited[i].File == limited[j].File {
+				return limited[i].Line < limited[j].Line
+			}
+			return limited[i].File < limited[j].File
+		})
+
+		next := map[string]any(nil)
+		if truncated {
+			next = map[string]any{
+				"tool": "search-vault",
+				"args": map[string]any{
+					"query":     query,
+					"directory": dir,
+					"mode":      modeDetailed,
+				},
+			}
+		}
+
+		return compactResult(
+			fmt.Sprintf("Found %d matches for %q", len(results), query),
+			truncated,
+			map[string]any{
+				"query":         query,
+				"files_scanned": filesScanned,
+				"total_matches": len(results),
+				"returned":      len(limited),
+				"matches":       limited,
+			},
+			next,
+		)
 	}
 
 	var sb strings.Builder

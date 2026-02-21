@@ -19,6 +19,7 @@ func (v *Vault) SetFrontmatterHandler(ctx context.Context, req *mcp.CallToolRequ
 	notePath := args.Path
 	key := args.Key
 	value := args.Value
+	expectedMtime := args.ExpectedMtime
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
@@ -35,6 +36,9 @@ func (v *Vault) SetFrontmatterHandler(ctx context.Context, req *mcp.CallToolRequ
 			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
 		return nil, nil, fmt.Errorf("failed to read note: %v", err)
+	}
+	if err := ensureExpectedMtime(fullPath, expectedMtime); err != nil {
+		return nil, nil, err
 	}
 
 	newContent := setFrontmatterKey(string(content), key, value)
@@ -54,6 +58,7 @@ func (v *Vault) SetFrontmatterHandler(ctx context.Context, req *mcp.CallToolRequ
 func (v *Vault) RemoveFrontmatterKeyHandler(ctx context.Context, req *mcp.CallToolRequest, args DeleteFrontmatterArgs) (*mcp.CallToolResult, any, error) {
 	notePath := args.Path
 	key := args.Key
+	expectedMtime := args.ExpectedMtime
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
@@ -70,6 +75,9 @@ func (v *Vault) RemoveFrontmatterKeyHandler(ctx context.Context, req *mcp.CallTo
 			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
 		return nil, nil, fmt.Errorf("failed to read note: %v", err)
+	}
+	if err := ensureExpectedMtime(fullPath, expectedMtime); err != nil {
+		return nil, nil, err
 	}
 
 	newContent, removed := removeFrontmatterKey(string(content), key)
@@ -96,6 +104,7 @@ func (v *Vault) RemoveFrontmatterKeyHandler(ctx context.Context, req *mcp.CallTo
 func (v *Vault) AddAliasHandler(ctx context.Context, req *mcp.CallToolRequest, args AddAliasArgs) (*mcp.CallToolResult, any, error) {
 	notePath := args.Path
 	alias := args.Alias
+	expectedMtime := args.ExpectedMtime
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
@@ -112,6 +121,9 @@ func (v *Vault) AddAliasHandler(ctx context.Context, req *mcp.CallToolRequest, a
 			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
 		return nil, nil, fmt.Errorf("failed to read note: %v", err)
+	}
+	if err := ensureExpectedMtime(fullPath, expectedMtime); err != nil {
+		return nil, nil, err
 	}
 
 	newContent := addToFrontmatterArray(string(content), "aliases", alias)
@@ -131,6 +143,7 @@ func (v *Vault) AddAliasHandler(ctx context.Context, req *mcp.CallToolRequest, a
 func (v *Vault) AddTagToFrontmatterHandler(ctx context.Context, req *mcp.CallToolRequest, args AddTagArgs) (*mcp.CallToolResult, any, error) {
 	notePath := args.Path
 	tag := args.Tag
+	expectedMtime := args.ExpectedMtime
 
 	// Normalize tag (remove # if present)
 	tag = strings.TrimPrefix(tag, "#")
@@ -150,6 +163,9 @@ func (v *Vault) AddTagToFrontmatterHandler(ctx context.Context, req *mcp.CallToo
 			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
 		return nil, nil, fmt.Errorf("failed to read note: %v", err)
+	}
+	if err := ensureExpectedMtime(fullPath, expectedMtime); err != nil {
+		return nil, nil, err
 	}
 
 	newContent := addToFrontmatterArray(string(content), "tags", tag)

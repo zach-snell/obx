@@ -148,6 +148,8 @@ func formatTasks(tasks []Task) string {
 // ListTasksHandler lists all tasks across the vault
 func (v *Vault) ListTasksHandler(ctx context.Context, req *mcp.CallToolRequest, args ListTasksArgs) (*mcp.CallToolResult, any, error) {
 	status := args.Status
+	mode := normalizeMode(args.Mode)
+	limit := args.Limit
 	if status == "" {
 		status = "all"
 	}
@@ -156,18 +158,71 @@ func (v *Vault) ListTasksHandler(ctx context.Context, req *mcp.CallToolRequest, 
 	if args.Directory != "" {
 		searchPath = filepath.Join(v.path, args.Directory)
 	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
+	}
 
 	tasks, err := v.collectTasks(searchPath, status)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to list tasks: %v", err)
 	}
 
+	totalTasks := len(tasks)
+	truncated := false
+	if limit > 0 && totalTasks > limit {
+		tasks = tasks[:limit]
+		truncated = true
+	}
+	if !isDetailedMode(mode) {
+		compactLimit := limit
+		if compactLimit <= 0 {
+			compactLimit = 100
+		}
+		if len(tasks) > compactLimit {
+			tasks = tasks[:compactLimit]
+			truncated = true
+		}
+	}
+
 	if len(tasks) == 0 {
+		if !isDetailedMode(mode) {
+			return compactResult("No tasks found", false, map[string]any{
+				"status":      status,
+				"total_tasks": totalTasks,
+				"returned":    0,
+				"tasks":       []Task{},
+			}, nil)
+		}
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				&mcp.TextContent{Text: "No tasks found"},
 			},
 		}, nil, nil
+	}
+
+	if !isDetailedMode(mode) {
+		next := map[string]any(nil)
+		if truncated {
+			next = map[string]any{
+				"tool": "list-tasks",
+				"args": map[string]any{
+					"status":    status,
+					"directory": args.Directory,
+					"mode":      modeDetailed,
+				},
+			}
+		}
+		return compactResult(
+			fmt.Sprintf("Found %d tasks", totalTasks),
+			truncated,
+			map[string]any{
+				"status":      status,
+				"total_tasks": totalTasks,
+				"returned":    len(tasks),
+				"tasks":       tasks,
+			},
+			next,
+		)
 	}
 
 	return &mcp.CallToolResult{
@@ -221,6 +276,9 @@ func (v *Vault) ToggleTaskHandler(ctx context.Context, req *mcp.CallToolRequest,
 	fullPath := filepath.Join(v.path, path)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
+	}
+	if err := ensureExpectedMtime(fullPath, args.ExpectedMtime); err != nil {
+		return nil, nil, err
 	}
 
 	content, err := os.ReadFile(fullPath)
@@ -284,6 +342,9 @@ func (v *Vault) CompleteTasksHandler(ctx context.Context, req *mcp.CallToolReque
 	fullPath := filepath.Join(v.path, path)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
+	}
+	if err := ensureExpectedMtime(fullPath, args.ExpectedMtime); err != nil {
+		return nil, nil, err
 	}
 
 	content, err := os.ReadFile(fullPath)

@@ -86,10 +86,25 @@ The server will be auto-discovered, or add to your config:
 </details>
 
 <details>
+<summary><b>HTTP Streamable Transport</b></summary>
+
+Run as an HTTP server for remote access or multi-client setups:
+
+```bash
+# Start HTTP server on port 8080
+obsidian-mcp /path/to/vault --http :8080
+# or via env var
+OBSIDIAN_ADDR=:8080 obsidian-mcp /path/to/vault
+```
+
+Then configure your MCP client to connect to `http://localhost:8080/mcp`.
+</details>
+
+<details>
 <summary><b>Other MCP Clients</b></summary>
 
 ```bash
-# Run directly (communicates via stdio)
+# Run directly (communicates via stdio, default)
 ./obsidian-mcp /path/to/vault
 ```
 </details>
@@ -281,6 +296,46 @@ curl -sSL https://raw.githubusercontent.com/zach-snell/obsidian-go-mcp/main/inst
 
 ---
 
+## Token-Efficient + Safe Writes
+
+High-frequency tools now support compact responses and destructive tools support preview-first workflows.
+
+### Response Modes
+
+- `mode=compact` (default): small JSON envelope with summary + bounded data
+- `mode=detailed`: legacy markdown-rich output for human reading
+
+Example compact envelope:
+
+```json
+{
+  "status": "ok",
+  "mode": "compact",
+  "summary": "Found 42 notes",
+  "truncated": false,
+  "data": {
+    "total_count": 42,
+    "returned_count": 42
+  }
+}
+```
+
+### Dry Run For Destructive/Bulk Tools
+
+Use `dry_run=true` to preview operations without writing:
+
+- `delete-note`, `delete-folder`
+- `bulk-tag`, `bulk-move`, `bulk-set-frontmatter`
+- `merge-notes`, `extract-note`, `extract-section`
+- `batch-edit-note`
+
+### Optimistic Concurrency
+
+Write/edit tools accept optional `expected_mtime` (RFC3339Nano).  
+If file modification time differs, the operation fails instead of overwriting newer changes.
+
+---
+
 ## Usage Examples
 
 ### Daily Workflow
@@ -388,6 +443,7 @@ mise install && mise run check
 # Without mise
 go build -o obsidian-mcp ./cmd/server
 go test -race -cover ./...
+go test -bench 'Benchmark(ListNotes|SearchVault)' ./internal/vault
 ```
 
 ### Available Commands
