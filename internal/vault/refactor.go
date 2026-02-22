@@ -26,7 +26,7 @@ func (v *Vault) ExtractNoteHandler(ctx context.Context, req *mcp.CallToolRequest
 		path += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, path)
+	fullPath := filepath.Join(v.GetPath(), path)
 
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
@@ -52,7 +52,7 @@ func (v *Vault) ExtractNoteHandler(ctx context.Context, req *mcp.CallToolRequest
 	if outputDir == "" {
 		outputDir = filepath.Dir(path)
 	}
-	outputDirFull := filepath.Join(v.path, outputDir)
+	outputDirFull := filepath.Join(v.GetPath(), outputDir)
 	if !v.isPathSafe(outputDirFull) {
 		return nil, nil, fmt.Errorf("output directory must be within vault")
 	}
@@ -115,7 +115,7 @@ func (v *Vault) writeSplitSections(sections []section, outputDir string, dryRun 
 				return nil, fmt.Errorf("failed to write %s: %v", filename, err)
 			}
 		}
-		relPath, _ := filepath.Rel(v.path, newPath)
+		relPath, _ := filepath.Rel(v.GetPath(), newPath)
 		created = append(created, relPath)
 	}
 	return created, nil
@@ -213,7 +213,7 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req *mcp.CallToolRequest,
 	if !strings.HasSuffix(output, ".md") {
 		output += ".md"
 	}
-	outputFull := filepath.Join(v.path, output)
+	outputFull := filepath.Join(v.GetPath(), output)
 	if !v.isPathSafe(outputFull) {
 		return nil, nil, fmt.Errorf("output path must be within vault")
 	}
@@ -233,7 +233,7 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req *mcp.CallToolRequest,
 	// Delete originals if requested
 	if deleteOriginals && !dryRun {
 		for _, p := range validPaths {
-			fullPath := filepath.Join(v.path, p)
+			fullPath := filepath.Join(v.GetPath(), p)
 			if err := os.Remove(fullPath); err != nil {
 				// Log but don't fail
 				continue
@@ -273,7 +273,7 @@ func (v *Vault) readMergeContents(paths []string, addHeadings bool) (contents, v
 		if !strings.HasSuffix(p, ".md") {
 			p += ".md"
 		}
-		fullPath := filepath.Join(v.path, p)
+		fullPath := filepath.Join(v.GetPath(), p)
 		if !v.isPathSafe(fullPath) {
 			return nil, nil, fmt.Errorf("path must be within vault: %s", p)
 		}
@@ -307,7 +307,7 @@ func (v *Vault) ExtractSectionHandler(ctx context.Context, req *mcp.CallToolRequ
 		path += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, path)
+	fullPath := filepath.Join(v.GetPath(), path)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -331,7 +331,7 @@ func (v *Vault) ExtractSectionHandler(ctx context.Context, req *mcp.CallToolRequ
 		output += ".md"
 	}
 
-	outputFull := filepath.Join(v.path, output)
+	outputFull := filepath.Join(v.GetPath(), output)
 	if !v.isPathSafe(outputFull) {
 		return nil, nil, fmt.Errorf("output path must be within vault")
 	}
@@ -430,7 +430,7 @@ func (v *Vault) DuplicateNoteHandler(ctx context.Context, req *mcp.CallToolReque
 		path += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, path)
+	fullPath := filepath.Join(v.GetPath(), path)
 
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
@@ -451,7 +451,7 @@ func (v *Vault) DuplicateNoteHandler(ctx context.Context, req *mcp.CallToolReque
 		output += ".md"
 	}
 
-	outputFull := filepath.Join(v.path, output)
+	outputFull := filepath.Join(v.GetPath(), output)
 	if !v.isPathSafe(outputFull) {
 		return nil, nil, fmt.Errorf("output path must be within vault")
 	}

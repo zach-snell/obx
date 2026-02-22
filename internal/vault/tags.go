@@ -88,9 +88,9 @@ func (v *Vault) SearchByTagsHandler(ctx context.Context, req *mcp.CallToolReques
 		return nil, nil, fmt.Errorf("at least one tag is required")
 	}
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
 	}
 	if !v.isPathSafe(searchPath) {
 		return nil, nil, fmt.Errorf("search path must be within vault")
@@ -131,7 +131,7 @@ func (v *Vault) SearchByTagsHandler(ctx context.Context, req *mcp.CallToolReques
 		}
 
 		if hasAll {
-			relPath, _ := filepath.Rel(v.path, path)
+			relPath, _ := filepath.Rel(v.GetPath(), path)
 			results = append(results, result{path: relPath, tags: noteTags})
 		}
 		return nil

@@ -1,11 +1,11 @@
 ---
 title: Development
-description: Contributing to and developing obsidian-go-mcp.
+description: Contributing to and developing obx.
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-This guide covers setting up a development environment and contributing to obsidian-go-mcp.
+This guide covers setting up a development environment and contributing to obx.
 
 ## Prerequisites
 
@@ -18,8 +18,8 @@ This guide covers setting up a development environment and contributing to obsid
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/zach-snell/obsidian-go-mcp.git
-cd obsidian-go-mcp
+git clone https://github.com/zach-snell/obx.git
+cd obx
 ```
 
 ### Install Dependencies
@@ -46,7 +46,7 @@ cd obsidian-go-mcp
 ```bash
 mise run build
 # or
-go build -o bin/obsidian-mcp ./cmd/server
+go build -o bin/obx ./cmd/obx
 ```
 
 ### Run Tests
@@ -60,7 +60,7 @@ go test -race -cover ./...
 ## Project Structure
 
 ```
-obsidian-go-mcp/
+obx/
 ├── cmd/
 │   └── server/
 │       └── main.go          # Entry point
@@ -317,5 +317,5 @@ PRs are reviewed for:
 
 ## Getting Help
 
-- **Issues**: [GitHub Issues](https://github.com/zach-snell/obsidian-go-mcp/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/zach-snell/obsidian-go-mcp/discussions)
+- **Issues**: [GitHub Issues](https://github.com/zach-snell/obx/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/zach-snell/obx/discussions)

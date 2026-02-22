@@ -5,16 +5,16 @@ import starlight from '@astrojs/starlight';
 // https://astro.build/config
 export default defineConfig({
 	site: 'https://zach-snell.github.io',
-	base: '/obsidian-go-mcp',
+	base: '/obx',
 	integrations: [
 		starlight({
-			title: 'obsidian-go-mcp',
+			title: 'obx',
 			description: 'A fast, lightweight MCP server for Obsidian vaults written in Go.',
 			social: [
-				{ icon: 'github', label: 'GitHub', href: 'https://github.com/zach-snell/obsidian-go-mcp' },
+				{ icon: 'github', label: 'GitHub', href: 'https://github.com/zach-snell/obx' },
 			],
 			editLink: {
-				baseUrl: 'https://github.com/zach-snell/obsidian-go-mcp/edit/main/docs/',
+				baseUrl: 'https://github.com/zach-snell/obx/edit/main/docs/',
 			},
 			customCss: ['./src/styles/custom.css'],
 			sidebar: [
@@ -28,18 +28,34 @@ export default defineConfig({
 					],
 				},
 				{
-					label: 'Tools Reference',
+					label: 'CLI Commands',
 					items: [
-						{ label: 'Overview', slug: 'tools/overview' },
-						{ label: 'Core Operations', slug: 'tools/core' },
-						{ label: 'Search', slug: 'tools/search' },
-						{ label: 'Frontmatter & Fields', slug: 'tools/frontmatter' },
-						{ label: 'Graph & Links', slug: 'tools/graph' },
-						{ label: 'Periodic Notes', slug: 'tools/periodic' },
-						{ label: 'Templates', slug: 'tools/templates' },
-						{ label: 'Organization', slug: 'tools/organization' },
-						{ label: 'Bulk Operations', slug: 'tools/bulk' },
-						{ label: 'Canvas', slug: 'tools/canvas' },
+						{ label: 'Overview', slug: 'cli/overview' },
+						{ label: 'obx search', slug: 'cli/search' },
+						{ label: 'obx doctor', slug: 'cli/doctor' },
+						{ label: 'obx daily', slug: 'cli/daily' },
+						{ label: 'obx vault', slug: 'cli/vault' },
+					],
+				},
+				{
+					label: 'MCP Tool Reference',
+					items: [
+						{ label: 'Overview', slug: 'mcp/overview' },
+						{ label: 'manage-notes', slug: 'mcp/manage-notes' },
+						{ label: 'edit-note', slug: 'mcp/edit-note' },
+						{ label: 'search-vault', slug: 'mcp/search-vault' },
+						{ label: 'manage-periodic-notes', slug: 'mcp/manage-periodic-notes' },
+						{ label: 'manage-folders', slug: 'mcp/manage-folders' },
+						{ label: 'manage-frontmatter', slug: 'mcp/manage-frontmatter' },
+						{ label: 'manage-tasks', slug: 'mcp/manage-tasks' },
+						{ label: 'analyze-vault', slug: 'mcp/analyze-vault' },
+						{ label: 'manage-canvas', slug: 'mcp/manage-canvas' },
+						{ label: 'manage-mocs', slug: 'mcp/manage-mocs' },
+						{ label: 'read-batch', slug: 'mcp/read-batch' },
+						{ label: 'manage-links', slug: 'mcp/manage-links' },
+						{ label: 'bulk-operations', slug: 'mcp/bulk-operations' },
+						{ label: 'manage-templates', slug: 'mcp/manage-templates' },
+						{ label: 'manage-vaults', slug: 'mcp/manage-vaults' },
 					],
 				},
 				{

@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e
 
-# obsidian-go-mcp installer
-# Usage: curl -sSL https://raw.githubusercontent.com/zach-snell/obsidian-go-mcp/main/install.sh | bash
+# obx installer
+# Usage: curl -sSL https://raw.githubusercontent.com/zach-snell/obx/main/install.sh | bash
 
-REPO="zach-snell/obsidian-go-mcp"
-BINARY_NAME="obsidian-mcp"
+REPO="zach-snell/obx"
+BINARY_NAME="obx"
 
 # Default install dir, can be overridden with --user or INSTALL_DIR env var
 if [ "$1" = "--user" ]; then
@@ -60,7 +60,7 @@ has_command() {
 main() {
     echo ""
     echo -e "${GREEN}╔═══════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║     obsidian-go-mcp installer         ║${NC}"
+    echo -e "${GREEN}║     obx installer         ║${NC}"
     echo -e "${GREEN}╚═══════════════════════════════════════╝${NC}"
     echo ""
 
@@ -141,7 +141,7 @@ fi
 
 # Run with help flag
 if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
-    echo "obsidian-go-mcp installer"
+    echo "obx installer"
     echo ""
     echo "Usage:"
     echo "  curl -sSL https://raw.githubusercontent.com/${REPO}/main/install.sh | bash"

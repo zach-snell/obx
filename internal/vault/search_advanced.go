@@ -53,9 +53,9 @@ func (v *Vault) SearchAdvancedHandler(ctx context.Context, req *mcp.CallToolRequ
 		limit = 50
 	}
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if args.Directory != "" {
-		searchPath = filepath.Join(v.path, args.Directory)
+		searchPath = filepath.Join(v.GetPath(), args.Directory)
 	}
 
 	if !v.isPathSafe(searchPath) {
@@ -79,7 +79,7 @@ func (v *Vault) SearchAdvancedHandler(ctx context.Context, req *mcp.CallToolRequ
 			return nil
 		}
 
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 		if matched, line, text := matchNoteByScope(searchIn, relPath, string(content), terms, operator); matched {
 			results = append(results, SearchResult{File: relPath, Line: line, Content: text})
 		}
@@ -226,9 +226,9 @@ func (v *Vault) SearchDateHandler(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, nil, err
 	}
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if args.Directory != "" {
-		searchPath = filepath.Join(v.path, args.Directory)
+		searchPath = filepath.Join(v.GetPath(), args.Directory)
 	}
 
 	if !v.isPathSafe(searchPath) {
@@ -250,7 +250,7 @@ func (v *Vault) SearchDateHandler(ctx context.Context, req *mcp.CallToolRequest,
 		if !isTimeInRange(info.ModTime(), fromTime, toTime) {
 			return nil
 		}
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 		results = append(results, dateResult{path: relPath, time: info.ModTime()})
 		return nil
 	})
@@ -303,7 +303,7 @@ func (v *Vault) collectRegexMatches(re *regexp.Regexp, searchPath string) ([]Sea
 		}
 
 		lines := strings.Split(string(content), "\n")
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 
 		for i, line := range lines {
 			if re.MatchString(line) {
@@ -341,9 +341,9 @@ func (v *Vault) SearchRegexHandler(ctx context.Context, req *mcp.CallToolRequest
 		return nil, nil, fmt.Errorf("invalid regex: %v", err)
 	}
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
 	}
 
 	if !v.isPathSafe(searchPath) {

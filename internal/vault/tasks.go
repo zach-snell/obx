@@ -101,7 +101,7 @@ func (v *Vault) collectTasks(searchPath, status string) ([]Task, error) {
 		if err != nil {
 			return nil
 		}
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 		for i, line := range strings.Split(string(content), "\n") {
 			if task := ParseTask(line, i+1); task != nil && taskMatchesStatus(task, status) {
 				task.File = relPath
@@ -154,9 +154,9 @@ func (v *Vault) ListTasksHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		status = "all"
 	}
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if args.Directory != "" {
-		searchPath = filepath.Join(v.path, args.Directory)
+		searchPath = filepath.Join(v.GetPath(), args.Directory)
 	}
 	if !v.isPathSafe(searchPath) {
 		return nil, nil, fmt.Errorf("search path must be within vault")
@@ -273,7 +273,7 @@ func (v *Vault) ToggleTaskHandler(ctx context.Context, req *mcp.CallToolRequest,
 		path += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, path)
+	fullPath := filepath.Join(v.GetPath(), path)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -339,7 +339,7 @@ func (v *Vault) CompleteTasksHandler(ctx context.Context, req *mcp.CallToolReque
 		path += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, path)
+	fullPath := filepath.Join(v.GetPath(), path)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}

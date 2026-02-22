@@ -25,7 +25,7 @@ func (v *Vault) SetFrontmatterHandler(ctx context.Context, req *mcp.CallToolRequ
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -64,7 +64,7 @@ func (v *Vault) RemoveFrontmatterKeyHandler(ctx context.Context, req *mcp.CallTo
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -110,7 +110,7 @@ func (v *Vault) AddAliasHandler(ctx context.Context, req *mcp.CallToolRequest, a
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -152,7 +152,7 @@ func (v *Vault) AddTagToFrontmatterHandler(ctx context.Context, req *mcp.CallToo
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}

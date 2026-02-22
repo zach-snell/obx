@@ -72,7 +72,7 @@ func (v *Vault) GetInlineFieldsHandler(ctx context.Context, req *mcp.CallToolReq
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -121,7 +121,7 @@ func (v *Vault) SetInlineFieldHandler(ctx context.Context, req *mcp.CallToolRequ
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -194,9 +194,9 @@ type inlineFieldResult struct {
 
 // searchInlineFields searches the vault for inline fields matching the query
 func (v *Vault) searchInlineFields(dir string, query *inlineFieldQuery) ([]inlineFieldResult, error) {
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
 	}
 	if !v.isPathSafe(searchPath) {
 		return nil, fmt.Errorf("search path must be within vault")
@@ -224,7 +224,7 @@ func (v *Vault) searchInlineFields(dir string, query *inlineFieldQuery) ([]inlin
 		}
 
 		if len(matched) > 0 {
-			relPath, _ := filepath.Rel(v.path, path)
+			relPath, _ := filepath.Rel(v.GetPath(), path)
 			results = append(results, inlineFieldResult{path: relPath, fields: matched})
 		}
 

@@ -6,24 +6,65 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Vault represents an Obsidian vault
 type Vault struct {
-	path string
+	mu            sync.RWMutex
+	activePath    string
+	allowedVaults map[string]string
 }
 
 // New creates a new Vault instance
 func New(path string) *Vault {
 	cleanPath, _ := filepath.Abs(filepath.Clean(path))
-	return &Vault{path: cleanPath}
+	return &Vault{
+		activePath:    cleanPath,
+		allowedVaults: make(map[string]string),
+	}
+}
+
+// SetAllowedVaults configures which vaults can be dynamically switched to
+func (v *Vault) SetAllowedVaults(vaults map[string]string) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.allowedVaults = vaults
+}
+
+// GetAllowedVaults thread-safely returns the configured vaults
+func (v *Vault) GetAllowedVaults() map[string]string {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+
+	// Return a copy to prevent external mutation
+	vaults := make(map[string]string, len(v.allowedVaults))
+	for k, val := range v.allowedVaults {
+		vaults[k] = val
+	}
+	return vaults
+}
+
+// GetPath thread-safely returns the active vault path
+func (v *Vault) GetPath() string {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+	return v.activePath
+}
+
+// SetPath thread-safely sets the active vault path
+func (v *Vault) SetPath(path string) {
+	cleanPath, _ := filepath.Abs(filepath.Clean(path))
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.activePath = cleanPath
 }
 
 // isPathSafe checks if the given path is within the vault (prevents path traversal)
 func (v *Vault) isPathSafe(fullPath string) bool {
-	cleanVault := filepath.Clean(v.path)
+	cleanVault := filepath.Clean(v.GetPath())
 	cleanTarget := filepath.Clean(fullPath)
 
 	// First apply lexical path traversal protection.
@@ -86,9 +127,9 @@ func (v *Vault) ListNotesHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		limit = 100
 	}
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
 	}
 	if !v.isPathSafe(searchPath) {
 		return nil, nil, fmt.Errorf("search path must be within vault")
@@ -100,7 +141,7 @@ func (v *Vault) ListNotesHandler(ctx context.Context, req *mcp.CallToolRequest, 
 			return nil // Skip errors
 		}
 		if !info.IsDir() && strings.HasSuffix(path, ".md") {
-			relPath, _ := filepath.Rel(v.path, path)
+			relPath, _ := filepath.Rel(v.GetPath(), path)
 			notes = append(notes, relPath)
 		}
 		return nil
@@ -210,7 +251,7 @@ func (v *Vault) ReadNoteHandler(ctx context.Context, req *mcp.CallToolRequest, a
 		return nil, nil, fmt.Errorf("path must end with .md")
 	}
 
-	fullPath := filepath.Join(v.path, path)
+	fullPath := filepath.Join(v.GetPath(), path)
 
 	// Security: ensure path is within vault
 	if !v.isPathSafe(fullPath) {
@@ -242,7 +283,7 @@ func (v *Vault) WriteNoteHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		return nil, nil, fmt.Errorf("path must end with .md")
 	}
 
-	fullPath := filepath.Join(v.path, path)
+	fullPath := filepath.Join(v.GetPath(), path)
 
 	// Security: ensure path is within vault
 	if !v.isPathSafe(fullPath) {
@@ -284,7 +325,7 @@ func (v *Vault) DeleteNoteHandler(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, nil, fmt.Errorf("path must end with .md")
 	}
 
-	fullPath := filepath.Join(v.path, path)
+	fullPath := filepath.Join(v.GetPath(), path)
 
 	// Security: ensure path is within vault
 	if !v.isPathSafe(fullPath) {

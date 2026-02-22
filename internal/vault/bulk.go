@@ -43,7 +43,7 @@ func (v *Vault) BulkTagHandler(ctx context.Context, req *mcp.CallToolRequest, ar
 			p += ".md"
 		}
 
-		fullPath := filepath.Join(v.path, p)
+		fullPath := filepath.Join(v.GetPath(), p)
 		if !v.isPathSafe(fullPath) {
 			errors = append(errors, fmt.Sprintf("%s: path must be within vault", p))
 			continue
@@ -245,7 +245,7 @@ func (v *Vault) BulkMoveHandler(ctx context.Context, req *mcp.CallToolRequest, a
 	}
 
 	// Ensure destination exists
-	destFull := filepath.Join(v.path, destination)
+	destFull := filepath.Join(v.GetPath(), destination)
 	if !v.isPathSafe(destFull) {
 		return nil, nil, fmt.Errorf("destination must be within vault")
 	}
@@ -263,7 +263,7 @@ func (v *Vault) BulkMoveHandler(ctx context.Context, req *mcp.CallToolRequest, a
 			p += ".md"
 		}
 
-		oldPath := filepath.Join(v.path, p)
+		oldPath := filepath.Join(v.GetPath(), p)
 		if !v.isPathSafe(oldPath) {
 			errors = append(errors, fmt.Sprintf("%s: path must be within vault", p))
 			continue
@@ -356,7 +356,7 @@ func (v *Vault) BulkSetFrontmatterHandler(ctx context.Context, req *mcp.CallTool
 			p += ".md"
 		}
 
-		fullPath := filepath.Join(v.path, p)
+		fullPath := filepath.Join(v.GetPath(), p)
 		if !v.isPathSafe(fullPath) {
 			errors = append(errors, fmt.Sprintf("%s: path must be within vault", p))
 			continue

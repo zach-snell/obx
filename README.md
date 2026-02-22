@@ -1,17 +1,17 @@
-# obsidian-go-mcp
+# obx
 
-[![CI](https://github.com/zach-snell/obsidian-go-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/zach-snell/obsidian-go-mcp/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/zach-snell/obsidian-go-mcp)](https://goreportcard.com/report/github.com/zach-snell/obsidian-go-mcp)
+[![CI](https://github.com/zach-snell/obx/actions/workflows/ci.yml/badge.svg)](https://github.com/zach-snell/obx/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/zach-snell/obx)](https://goreportcard.com/report/github.com/zach-snell/obx)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Docs](https://img.shields.io/badge/docs-zach--snell.github.io-blue)](https://zach-snell.github.io/obsidian-go-mcp/)
+[![Docs](https://img.shields.io/badge/docs-zach--snell.github.io-blue)](https://zach-snell.github.io/obx/)
 
 A fast, lightweight [MCP](https://modelcontextprotocol.io/) server for [Obsidian](https://obsidian.md/) vaults. Built in Go for speed and simplicity.
 
-**[Documentation](https://zach-snell.github.io/obsidian-go-mcp/)** | **[Quick Start](#quick-start)** | **[Tools Reference](#tools-reference-70-total)**
+**[Documentation](https://zach-snell.github.io/obx/)** | **[Quick Start](#quick-start)** | **[Tools Reference](#tools-reference-70-total)**
 
 ## Why This Project?
 
-| Feature | obsidian-go-mcp | Other MCP Servers |
+| Feature | obx | Other MCP Servers |
 |---------|-----------------|-------------------|
 | **No plugins required** | Works directly with vault files | Often require Obsidian REST API plugin |
 | **Single binary** | One file, zero dependencies | Node.js/Python runtime needed |
@@ -24,14 +24,14 @@ A fast, lightweight [MCP](https://modelcontextprotocol.io/) server for [Obsidian
 **1. Install with one command:**
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/zach-snell/obsidian-go-mcp/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/zach-snell/obx/main/install.sh | bash
 ```
 
 This auto-detects your OS/architecture and installs to `/usr/local/bin`.
 
 > **No sudo?** Install to `~/.local/bin` instead:
 > ```bash
-> curl -sSL https://raw.githubusercontent.com/zach-snell/obsidian-go-mcp/main/install.sh | bash -s -- --user
+> curl -sSL https://raw.githubusercontent.com/zach-snell/obx/main/install.sh | bash -s -- --user
 > ```
 
 <details>
@@ -39,13 +39,13 @@ This auto-detects your OS/architecture and installs to `/usr/local/bin`.
 
 ```bash
 # macOS (Apple Silicon)
-curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-darwin-arm64 -o obsidian-mcp && chmod +x obsidian-mcp
+curl -sSL https://github.com/zach-snell/obx/releases/latest/download/obx-darwin-arm64 -o obx && chmod +x obx
 
 # macOS (Intel)
-curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-darwin-amd64 -o obsidian-mcp && chmod +x obsidian-mcp
+curl -sSL https://github.com/zach-snell/obx/releases/latest/download/obx-darwin-amd64 -o obx && chmod +x obx
 
 # Linux
-curl -sSL https://github.com/zach-snell/obsidian-go-mcp/releases/latest/download/obsidian-mcp-linux-amd64 -o obsidian-mcp && chmod +x obsidian-mcp
+curl -sSL https://github.com/zach-snell/obx/releases/latest/download/obx-linux-amd64 -o obx && chmod +x obx
 ```
 </details>
 
@@ -60,7 +60,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "obsidian": {
-      "command": "/path/to/obsidian-mcp",
+      "command": "/path/to/obx",
       "args": ["/path/to/your/vault"]
     }
   }
@@ -77,7 +77,7 @@ The server will be auto-discovered, or add to your config:
 {
   "mcpServers": {
     "obsidian": {
-      "command": "/path/to/obsidian-mcp",
+      "command": "/path/to/obx",
       "args": ["/path/to/your/vault"]
     }
   }
@@ -92,9 +92,9 @@ Run as an HTTP server for remote access or multi-client setups:
 
 ```bash
 # Start HTTP server on port 8080
-obsidian-mcp /path/to/vault --http :8080
+obx /path/to/vault --http :8080
 # or via env var
-OBSIDIAN_ADDR=:8080 obsidian-mcp /path/to/vault
+OBSIDIAN_ADDR=:8080 obx /path/to/vault
 ```
 
 Then configure your MCP client to connect to `http://localhost:8080/mcp`.
@@ -105,7 +105,7 @@ Then configure your MCP client to connect to `http://localhost:8080/mcp`.
 
 ```bash
 # Run directly (communicates via stdio, default)
-./obsidian-mcp /path/to/vault
+./obx /path/to/vault
 ```
 </details>
 
@@ -117,29 +117,29 @@ Then configure your MCP client to connect to `http://localhost:8080/mcp`.
 
 ### Pre-built Binaries (Recommended)
 
-Download from [Releases](https://github.com/zach-snell/obsidian-go-mcp/releases/latest):
+Download from [Releases](https://github.com/zach-snell/obx/releases/latest):
 
 | Platform | Binary |
 |----------|--------|
-| macOS (Apple Silicon) | `obsidian-mcp-darwin-arm64` |
-| macOS (Intel) | `obsidian-mcp-darwin-amd64` |
-| Linux (x64) | `obsidian-mcp-linux-amd64` |
-| Linux (ARM) | `obsidian-mcp-linux-arm64` |
-| Windows | `obsidian-mcp-windows-amd64.exe` |
+| macOS (Apple Silicon) | `obx-darwin-arm64` |
+| macOS (Intel) | `obx-darwin-amd64` |
+| Linux (x64) | `obx-linux-amd64` |
+| Linux (ARM) | `obx-linux-arm64` |
+| Windows | `obx-windows-amd64.exe` |
 
 ### Go Install
 
 ```bash
-go install github.com/zach-snell/obsidian-go-mcp/cmd/server@latest
-mv $(go env GOPATH)/bin/server $(go env GOPATH)/bin/obsidian-mcp
+go install github.com/zach-snell/obx/cmd/obx@latest
+mv $(go env GOPATH)/bin/server $(go env GOPATH)/bin/obx
 ```
 
 ### Build from Source
 
 ```bash
-git clone https://github.com/zach-snell/obsidian-go-mcp.git
-cd obsidian-go-mcp
-go build -o obsidian-mcp ./cmd/server
+git clone https://github.com/zach-snell/obx.git
+cd obx
+go build -o obx ./cmd/obx
 ```
 
 ### Upgrade
@@ -147,7 +147,33 @@ go build -o obsidian-mcp ./cmd/server
 Just run the install script again - it always fetches the latest version:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/zach-snell/obsidian-go-mcp/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/zach-snell/obx/main/install.sh | bash
+```
+
+## Advanced Server Configuration
+
+`obx serve` supports flags for strict access control and dynamic operations:
+
+### Selective Tool Disablement
+
+If you don't want the AI assistant to access specific tools (e.g. bulk operations or deletion), you can blacklist entire tool groups using the `--disabled-tools` flag:
+
+```bash
+obx serve /my/vault --disabled-tools manage-folders,bulk-operations,manage-frontmatter
+```
+
+### Dynamic Vault Switching
+
+By default, an `obx serve` instance is locked to a single vault path. If you want to allow an LLM to switch the active vault dynamically via the MCP protocol without restarting the server, enable it like this:
+
+```bash
+obx serve /my/vault --allow-vault-switching
+```
+
+To restrict which vaults the agent is allowed to switch to, first define aliases using setup commands like `obx vault add my-notes /path/to/notes`, then pass the allowed aliases to the server:
+
+```bash
+obx serve /my/vault --allow-vault-switching --allowed-vaults my-notes,work,personal
 ```
 
 ---
@@ -434,14 +460,14 @@ Compatible with [Obsidian Tasks](https://publish.obsidian.md/tasks/) plugin:
 
 ```bash
 # Setup (requires Go 1.21+)
-git clone https://github.com/zach-snell/obsidian-go-mcp.git
-cd obsidian-go-mcp
+git clone https://github.com/zach-snell/obx.git
+cd obx
 
 # With mise (recommended)
 mise install && mise run check
 
 # Without mise
-go build -o obsidian-mcp ./cmd/server
+go build -o obx ./cmd/obx
 go test -race -cover ./...
 go test -bench 'Benchmark(ListNotes|SearchVault)' ./internal/vault
 ```
@@ -470,7 +496,9 @@ A: No. Both can access the same files safely.
 A: Works fine. The server reads/writes standard markdown files.
 
 **Q: Can I use multiple vaults?**  
-A: Run multiple server instances, each pointing to a different vault.
+A: Yes! You have two main options:
+1. Run multiple server instances, each pointing to a different vault on a different port.
+2. Register vaults globally via `obx vault add <alias> <path>` and run the server with `obx serve --allow-vault-switching --allowed-vaults <aliases...>`. This exposes a `manage-vaults` MCP tool allowing the AI assistant to switch between them dynamically.
 
 ---
 

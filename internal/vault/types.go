@@ -2,6 +2,14 @@ package vault
 
 // --- Common ---
 
+// ListVaultsArgs arguments for list-vaults
+type ListVaultsArgs struct{}
+
+// SwitchVaultArgs arguments for switch-vault
+type SwitchVaultArgs struct {
+	Vault string `json:"vault" jsonschema:"The alias or absolute path of the vault to switch to"`
+}
+
 // ListNotesArgs arguments for list-notes
 type ListNotesArgs struct {
 	Directory string `json:"directory,omitempty" jsonschema:"Directory path relative to vault root (optional)"`

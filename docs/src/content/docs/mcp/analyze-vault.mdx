@@ -1,0 +1,15 @@
+---
+title: analyze-vault
+description: Find stubs, orphans, broken links, and outdated notes.
+---
+
+The `analyze-vault` MCP tool acts as a diagnostics and health-check engine.
+
+## Actions
+
+- `stats`: Returns aggregate file counts and sizes.
+- `broken-links`: Scans for wikilinks pointing to missing files.
+- `orphan-notes`: Finds files with zero incoming or outgoing connections.
+- `unlinked-mentions`: Suggests words in a note that exactly match another note's title.
+- `find-stubs`: Finds notes with extremely low word counts.
+- `find-outdated`: Finds files that haven't been touched in a very long time.

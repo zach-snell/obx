@@ -48,9 +48,9 @@ func IsMOC(content string) bool {
 func (v *Vault) DiscoverMOCsHandler(ctx context.Context, req *mcp.CallToolRequest, args DiscoverMOCsArgs) (*mcp.CallToolResult, any, error) {
 	dir := args.Directory
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
 	}
 
 	if !v.isPathSafe(searchPath) {
@@ -77,7 +77,7 @@ func (v *Vault) DiscoverMOCsHandler(ctx context.Context, req *mcp.CallToolReques
 			return nil
 		}
 
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 		title := ExtractH1Title(contentStr)
 		if title == "" {
 			title = strings.TrimSuffix(filepath.Base(path), ".md")

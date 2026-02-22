@@ -1,0 +1,13 @@
+---
+title: read-batch
+description: Ingest multiple notes at once, or extract specific headings for summaries.
+---
+
+The `read-batch` MCP tool maximizes network throughput by serving lots of distinct data chunks simultaneously.
+
+## Actions
+
+- `read`: Returns full bodies of multiple files.
+- `get-section`: Extracts just the targeted header blocks from many files.
+- `get-headings`: Provides an outline array of Markdown headers across files.
+- `get-summary`: (If applicable) Triggers an AI summarization of the note bodies locally.

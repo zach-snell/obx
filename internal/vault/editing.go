@@ -121,7 +121,7 @@ func (v *Vault) EditNoteHandler(ctx context.Context, req *mcp.CallToolRequest, a
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -206,7 +206,7 @@ func (v *Vault) ReplaceSectionHandler(ctx context.Context, req *mcp.CallToolRequ
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -312,7 +312,7 @@ func (v *Vault) AppendNoteHandler(ctx context.Context, req *mcp.CallToolRequest,
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -495,7 +495,7 @@ func (v *Vault) BatchEditNoteHandler(ctx context.Context, req *mcp.CallToolReque
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}

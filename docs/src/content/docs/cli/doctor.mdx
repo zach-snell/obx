@@ -1,0 +1,45 @@
+---
+title: obx doctor
+description: Identify broken links and orphans in your vault.
+---
+
+The `obx doctor` command analyzes your vault for structural issues, such as broken wikilinks or notes that have no incoming or outgoing connections.
+
+## Usage
+
+```bash
+obx doctor [flags] [vault_path]
+```
+
+## Options
+
+| Flag | Shorthand | Description | Default |
+|------|-----------|-------------|---------|
+| `--fail` | `-f` | Exit with a non-zero status code if any issues are found. Ideal for CI/CD pipelines. | `false` |
+
+## Examples
+
+### Basic Health Check
+
+```bash
+obx doctor
+```
+
+Output:
+```text
+Running vault diagnostics on /Users/zach/MyVault...
+
+Broken Links:
+- research/ai-notes.md -> non-existent-note
+
+Orphan Notes:
+- random-thoughts/2023-11-01.md
+```
+
+### CI/CD Integration
+
+To fail a GitHub Actions workflow if your vault contains broken links:
+
+```bash
+obx doctor --fail
+```

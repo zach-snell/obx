@@ -19,7 +19,7 @@ func (v *Vault) ForwardLinksHandler(ctx context.Context, req *mcp.CallToolReques
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -100,7 +100,7 @@ func (v *Vault) buildLinkGraph(searchPath string) (*linkGraph, error) {
 			return nil
 		}
 
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 		noteName := strings.TrimSuffix(relPath, ".md")
 
 		content, err := os.ReadFile(path)
@@ -222,9 +222,9 @@ func (v *Vault) OrphanNotesHandler(ctx context.Context, req *mcp.CallToolRequest
 	dir := args.Directory
 	includeDeadEnds := args.IncludeDeadEnds
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
 	}
 	if !v.isPathSafe(searchPath) {
 		return nil, nil, fmt.Errorf("search path must be within vault")
@@ -255,11 +255,11 @@ type brokenLink struct {
 // buildExistingNotesSet creates a set of all existing note names
 func (v *Vault) buildExistingNotesSet() (map[string]bool, error) {
 	existing := make(map[string]bool)
-	err := filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(v.GetPath(), func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
 			return nil
 		}
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 		noteName := strings.TrimSuffix(relPath, ".md")
 		existing[noteName] = true
 		existing[filepath.Base(noteName)] = true
@@ -326,9 +326,9 @@ func formatBrokenLinks(broken []brokenLink) string {
 func (v *Vault) BrokenLinksHandler(ctx context.Context, req *mcp.CallToolRequest, args BrokenLinksArgs) (*mcp.CallToolResult, any, error) {
 	dir := args.Directory
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
 	}
 	if !v.isPathSafe(searchPath) {
 		return nil, nil, fmt.Errorf("search path must be within vault")
@@ -348,7 +348,7 @@ func (v *Vault) BrokenLinksHandler(ctx context.Context, req *mcp.CallToolRequest
 		if err != nil {
 			return nil
 		}
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 		broken = append(broken, findBrokenLinksInNote(relPath, string(content), existing)...)
 		return nil
 	})
@@ -366,13 +366,13 @@ func (v *Vault) BrokenLinksHandler(ctx context.Context, req *mcp.CallToolRequest
 
 // noteExists checks if a note exists (handles path normalization)
 func (v *Vault) noteExists(link string) bool {
-	fullPath := filepath.Join(v.path, link+".md")
+	fullPath := filepath.Join(v.GetPath(), link+".md")
 	if _, err := os.Stat(fullPath); err == nil {
 		return true
 	}
 
 	var found bool
-	_ = filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(v.GetPath(), func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
 			return nil
 		}

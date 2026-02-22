@@ -16,9 +16,9 @@ func (v *Vault) ListFoldersHandler(ctx context.Context, req *mcp.CallToolRequest
 	dir := args.Directory
 	includeEmpty := args.IncludeEmpty
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
 	}
 	if !v.isPathSafe(searchPath) {
 		return nil, nil, fmt.Errorf("search path must be within vault")
@@ -36,7 +36,7 @@ func (v *Vault) ListFoldersHandler(ctx context.Context, req *mcp.CallToolRequest
 			return nil
 		}
 
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 		if relPath == "." {
 			return nil
 		}
@@ -105,7 +105,7 @@ func (v *Vault) ListFoldersHandler(ctx context.Context, req *mcp.CallToolRequest
 func (v *Vault) CreateFolderHandler(ctx context.Context, req *mcp.CallToolRequest, args CreateDirArgs) (*mcp.CallToolResult, any, error) {
 	folderPath := args.Path
 
-	fullPath := filepath.Join(v.path, folderPath)
+	fullPath := filepath.Join(v.GetPath(), folderPath)
 
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
@@ -149,8 +149,8 @@ func (v *Vault) MoveNoteHandler(ctx context.Context, req *mcp.CallToolRequest, a
 		destPath += ".md"
 	}
 
-	sourceFullPath := filepath.Join(v.path, sourcePath)
-	destFullPath := filepath.Join(v.path, destPath)
+	sourceFullPath := filepath.Join(v.GetPath(), sourcePath)
+	destFullPath := filepath.Join(v.GetPath(), destPath)
 
 	if !v.isPathSafe(sourceFullPath) || !v.isPathSafe(destFullPath) {
 		return nil, nil, fmt.Errorf("paths must be within vault")
@@ -215,7 +215,7 @@ func (v *Vault) updateLinksForMove(oldPath, newPath string) int {
 
 	updatedFiles := 0
 
-	_ = filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(v.GetPath(), func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
 			return nil
 		}
@@ -257,7 +257,7 @@ func (v *Vault) DeleteFolderHandler(ctx context.Context, req *mcp.CallToolReques
 	force := args.Force
 	dryRun := args.DryRun
 
-	fullPath := filepath.Join(v.path, folderPath)
+	fullPath := filepath.Join(v.GetPath(), folderPath)
 
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")

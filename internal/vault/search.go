@@ -26,9 +26,9 @@ func (v *Vault) SearchVaultHandler(ctx context.Context, req *mcp.CallToolRequest
 	dir := args.Directory
 	mode := normalizeMode(args.Mode)
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
 	}
 
 	if !v.isPathSafe(searchPath) {
@@ -54,7 +54,7 @@ func (v *Vault) SearchVaultHandler(ctx context.Context, req *mcp.CallToolRequest
 		filesScanned++
 
 		lines := strings.Split(string(content), "\n")
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 
 		for i, line := range lines {
 			if strings.Contains(strings.ToLower(line), queryLower) {

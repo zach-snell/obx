@@ -220,7 +220,7 @@ func (v *Vault) ListPeriodicNotesHandler(ctx context.Context, req *mcp.CallToolR
 		folder = customFolder
 	}
 
-	searchPath := filepath.Join(v.path, folder)
+	searchPath := filepath.Join(v.GetPath(), folder)
 
 	if !v.isPathSafe(searchPath) {
 		return nil, nil, fmt.Errorf("search path must be within vault")
@@ -247,7 +247,7 @@ func (v *Vault) ListPeriodicNotesHandler(ctx context.Context, req *mcp.CallToolR
 			return nil
 		}
 		if !info.IsDir() && strings.HasSuffix(path, ".md") {
-			relPath, _ := filepath.Rel(v.path, path)
+			relPath, _ := filepath.Rel(v.GetPath(), path)
 			notes = append(notes, noteInfo{
 				name:    strings.TrimSuffix(filepath.Base(path), ".md"),
 				path:    relPath,
@@ -301,7 +301,7 @@ func (v *Vault) getOrCreatePeriodicNote(folder, filename string, create bool, te
 		notePath = filename
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")

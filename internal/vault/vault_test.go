@@ -72,13 +72,13 @@ func TestNew(t *testing.T) {
 	v := New("./relative/../path")
 
 	// Should be an absolute path
-	if !filepath.IsAbs(v.path) {
-		t.Errorf("Vault path should be absolute, got: %s", v.path)
+	if !filepath.IsAbs(v.GetPath()) {
+		t.Errorf("Vault path should be absolute, got: %s", v.GetPath())
 	}
 
 	// Should not contain ..
-	if filepath.Clean(v.path) != v.path {
-		t.Errorf("Vault path should be clean, got: %s", v.path)
+	if filepath.Clean(v.GetPath()) != v.GetPath() {
+		t.Errorf("Vault path should be clean, got: %s", v.GetPath())
 	}
 }
 
