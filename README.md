@@ -7,7 +7,7 @@
 
 A fast, lightweight [MCP](https://modelcontextprotocol.io/) server for [Obsidian](https://obsidian.md/) vaults. Built in Go for speed and simplicity.
 
-**[Documentation](https://zach-snell.github.io/obx/)** | **[Quick Start](#quick-start)** | **[Tools Reference](#tools-reference-70-total)**
+**[Documentation](https://zach-snell.github.io/obx/)** | **[Quick Start](#quick-start)** | **[MCP Tool Reference](#mcp-tool-reference-14-multiplexed)**
 
 ## Why This Project?
 
@@ -178,147 +178,30 @@ obx serve /my/vault --allow-vault-switching --allowed-vaults my-notes,work,perso
 
 ---
 
-## Tools Reference (70 total)
+## MCP Tool Reference (14 Multiplexed)
 
-### Core Operations
+`obx` multiplexes its 70+ functions into 14 core MCP tool groups to prevent context-window exhaustion and stay well under LLM tool limit restraints (e.g. Cursor allows 40, Copilot allows 128). You pass an `"action"` argument to each tool to route to the specific functionality.
 
-| Tool | Description |
-|------|-------------|
-| `list-notes` | List notes with pagination |
-| `read-note` | Read a single note |
-| `read-notes` | Read multiple notes at once |
-| `write-note` | Create or update a note |
-| `edit-note` | Surgical find-and-replace |
-| `append-note` | Insert content with position targeting |
-| `replace-section` | Replace content under a heading |
-| `batch-edit-note` | Atomic multi-edit in one write |
-| `delete-note` | Delete a note |
-| `rename-note` | Rename and update all links |
-| `move-note` | Move to new location |
-| `duplicate-note` | Copy a note |
-| `recent-notes` | Recently modified notes |
+| MCP Tool Group | Description |
+|----------------|-------------|
+| `manage-notes` | Read, write, rename, append, delete, or duplicate notes. |
+| `edit-note` | Perform surgical find-and-replace or precise markdown header editing. |
+| `read-batch` | Read entire blocks of multiple files or extract headers simultaneously. |
+| `search-vault` | Leverage fuzzy text search, regex, tags, headings, or date queries. |
+| `bulk-operations` | Move directories, change root tags, or mass-update frontmatter fields across many files. |
+| `manage-folders` | List, create, or recursively delete directories. |
+| `manage-frontmatter` | Set, get, or remove specific YAML frontmatter keys on a single note. |
+| `manage-links` | Resolve backlinks, forward-links, or ask the AI to suggest new graph connections. |
+| `manage-tasks` | Parse lists of `- [ ]` markdown checkboxes, toggle states, or filter by completion. |
+| `analyze-vault` | Hunt for broken links, orphan notes, stubs, and get massive mathematical token/word stats. |
+| `manage-periodic-notes` | Fetch or instantiate Daily, Weekly, Monthly, or Yearly notes automatically. |
+| `manage-templates` | Find and dynamically inject markdown blocks from your templates directory. |
+| `manage-mocs` | Auto-generate alphabetical directory indices or group unlinked notes into Maps of Content. |
+| `manage-canvas` | Create logic nodes and draw line edges across Obsidian JSON `.canvas` files. |
+| `manage-vaults` | (Opt-in only) Dynamically remount the active server workspace without restarting. |
 
-### Search
-
-| Tool | Description |
-|------|-------------|
-| `search-vault` | Full-text content search |
-| `search-advanced` | Multi-term with AND/OR |
-| `search-regex` | Regular expression search |
-| `search-by-date` | Find by modification date |
-| `search-by-tags` | Tag-based search |
-| `search-headings` | Search heading text |
-| `query-frontmatter` | Search YAML properties |
-| `discover-mocs` | Find Maps of Content |
-
-### Note Context
-
-| Tool | Description |
-|------|-------------|
-| `get-note-summary` | Lightweight metadata + preview |
-| `get-headings` | List all headings with line ranges |
-| `get-section` | Extract a specific section |
-| `get-frontmatter` | Get YAML frontmatter |
-| `get-inline-fields` | Get Dataview fields |
-
-### Frontmatter & Fields
-
-| Tool | Description |
-|------|-------------|
-| `set-frontmatter` | Set a property |
-| `remove-frontmatter-key` | Remove a property |
-| `add-alias` | Add an alias |
-| `add-tag-to-frontmatter` | Add a tag |
-| `set-inline-field` | Set Dataview field |
-| `query-inline-fields` | Query by field values |
-
-### Graph & Links
-
-| Tool | Description |
-|------|-------------|
-| `backlinks` | Notes linking to this note |
-| `forward-links` | Outgoing links |
-| `orphan-notes` | Unconnected notes |
-| `broken-links` | Links to missing notes |
-| `unlinked-mentions` | Text that could be linked |
-| `suggest-links` | AI-friendly link suggestions |
-
-### Knowledge Gaps
-
-| Tool | Description |
-|------|-------------|
-| `find-stubs` | Short notes needing expansion |
-| `find-outdated` | Notes not updated recently |
-
-### Tasks
-
-| Tool | Description |
-|------|-------------|
-| `list-tasks` | All tasks with metadata |
-| `toggle-task` | Check/uncheck a task |
-
-### Periodic Notes
-
-| Tool | Description |
-|------|-------------|
-| `daily-note` | Get or create daily note |
-| `weekly-note` | Get or create weekly note |
-| `monthly-note` | Get or create monthly note |
-| `quarterly-note` | Get or create quarterly note |
-| `yearly-note` | Get or create yearly note |
-| `list-daily-notes` | List daily notes |
-| `list-periodic-notes` | List by type |
-
-### Templates
-
-| Tool | Description |
-|------|-------------|
-| `list-templates` | Available templates |
-| `get-template` | View template + variables |
-| `apply-template` | Create note from template |
-
-### Organization
-
-| Tool | Description |
-|------|-------------|
-| `generate-moc` | Generate Map of Content |
-| `update-moc` | Add new notes to MOC |
-| `generate-index` | Alphabetical index |
-| `split-note` | Split at headings |
-| `merge-notes` | Combine multiple notes |
-| `extract-section` | Move section to new note |
-
-### Folders
-
-| Tool | Description |
-|------|-------------|
-| `list-folders` | All folders |
-| `create-folder` | Create folder |
-| `delete-folder` | Delete folder |
-
-### Bulk Operations
-
-| Tool | Description |
-|------|-------------|
-| `bulk-tag` | Add/remove tags from many notes |
-| `bulk-move` | Move many notes |
-| `bulk-set-frontmatter` | Set property on many notes |
-
-### Canvas
-
-| Tool | Description |
-|------|-------------|
-| `list-canvases` | All canvas files |
-| `read-canvas` | Parse canvas content |
-| `create-canvas` | New empty canvas |
-| `add-canvas-node` | Add node to canvas |
-| `add-canvas-edge` | Connect nodes |
-
-### Analytics
-
-| Tool | Description |
-|------|-------------|
-| `vault-stats` | Notes, words, tasks, top tags |
+> [!NOTE]
+> For the exhaustive list of `action` arguments accepted by each tool group, please read the [Official Documentation Site](https://zach-snell.github.io/obx/).
 
 ---
 
