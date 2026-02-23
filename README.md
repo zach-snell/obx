@@ -9,6 +9,10 @@ A fast, lightweight [MCP](https://modelcontextprotocol.io/) server for [Obsidian
 
 **[Documentation](https://zach-snell.github.io/obx/)** | **[Quick Start](#quick-start)** | **[MCP Tool Reference](#mcp-tool-reference-16-multiplexed)**
 
+<p align="center">
+  <img src="demo.gif" alt="obx CLI demo" width="700" />
+</p>
+
 ## Why This Project?
 
 | Feature | obx | Other MCP Servers |
