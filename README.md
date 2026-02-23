@@ -65,7 +65,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "obsidian": {
       "command": "/path/to/obx",
-      "args": ["/path/to/your/vault"]
+      "args": ["serve", "/path/to/your/vault"]
     }
   }
 }
@@ -82,7 +82,7 @@ The server will be auto-discovered, or add to your config:
   "mcpServers": {
     "obsidian": {
       "command": "/path/to/obx",
-      "args": ["/path/to/your/vault"]
+      "args": ["serve", "/path/to/your/vault"]
     }
   }
 }
@@ -96,9 +96,9 @@ Run as an HTTP server for remote access or multi-client setups:
 
 ```bash
 # Start HTTP server on port 8080
-obx /path/to/vault --http :8080
+obx serve /path/to/vault --http :8080
 # or via env var
-OBSIDIAN_ADDR=:8080 obx /path/to/vault
+OBSIDIAN_ADDR=:8080 obx serve /path/to/vault
 ```
 
 Then configure your MCP client to connect to `http://localhost:8080/mcp`.
@@ -109,7 +109,7 @@ Then configure your MCP client to connect to `http://localhost:8080/mcp`.
 
 ```bash
 # Run directly (communicates via stdio, default)
-./obx /path/to/vault
+obx serve /path/to/vault
 ```
 </details>
 
