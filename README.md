@@ -7,7 +7,7 @@
 
 A fast, lightweight [MCP](https://modelcontextprotocol.io/) server for [Obsidian](https://obsidian.md/) vaults. Built in Go for speed and simplicity.
 
-**[Documentation](https://zach-snell.github.io/obx/)** | **[Quick Start](#quick-start)** | **[MCP Tool Reference](#mcp-tool-reference-14-multiplexed)**
+**[Documentation](https://zach-snell.github.io/obx/)** | **[Quick Start](#quick-start)** | **[MCP Tool Reference](#mcp-tool-reference-16-multiplexed)**
 
 ## Why This Project?
 
@@ -16,7 +16,7 @@ A fast, lightweight [MCP](https://modelcontextprotocol.io/) server for [Obsidian
 | **No plugins required** | Works directly with vault files | Often require Obsidian REST API plugin |
 | **Single binary** | One file, zero dependencies | Node.js/Python runtime needed |
 | **Cross-platform** | macOS, Linux, Windows | Often have platform issues |
-| **70 tools** | Comprehensive vault operations | Typically 10-20 tools |
+| **72 actions** | 16 multiplexed tools, comprehensive vault operations | Typically 10-20 tools |
 | **Fast startup** | ~10ms | Seconds for interpreted languages |
 
 ## Quick Start
@@ -178,19 +178,19 @@ obx serve /my/vault --allow-vault-switching --allowed-vaults my-notes,work,perso
 
 ---
 
-## MCP Tool Reference (14 Multiplexed)
+## MCP Tool Reference (16 Multiplexed)
 
-`obx` multiplexes its 70+ functions into 14 core MCP tool groups to prevent context-window exhaustion and stay well under LLM tool limit restraints (e.g. Cursor allows 40, Copilot allows 128). You pass an `"action"` argument to each tool to route to the specific functionality.
+`obx` multiplexes its 72 actions into 16 MCP tool groups to prevent context-window exhaustion and stay well under LLM tool limit restraints (e.g. Cursor allows 40, Copilot allows 128). You pass an `"action"` argument to each tool to route to the specific functionality.
 
 | MCP Tool Group | Description |
 |----------------|-------------|
-| `manage-notes` | Read, write, rename, append, delete, or duplicate notes. |
+| `manage-notes` | List, read, write, rename, append, delete, or duplicate notes. |
 | `edit-note` | Perform surgical find-and-replace or precise markdown header editing. |
 | `read-batch` | Read entire blocks of multiple files or extract headers simultaneously. |
-| `search-vault` | Leverage fuzzy text search, regex, tags, headings, or date queries. |
+| `search-vault` | Leverage fuzzy text search, regex, tags, headings, frontmatter queries, or date queries. |
 | `bulk-operations` | Move directories, change root tags, or mass-update frontmatter fields across many files. |
 | `manage-folders` | List, create, or recursively delete directories. |
-| `manage-frontmatter` | Set, get, or remove specific YAML frontmatter keys on a single note. |
+| `manage-frontmatter` | Set, get, or remove YAML frontmatter keys; read and write Dataview inline fields. |
 | `manage-links` | Resolve backlinks, forward-links, or ask the AI to suggest new graph connections. |
 | `manage-tasks` | Parse lists of `- [ ]` markdown checkboxes, toggle states, or filter by completion. |
 | `analyze-vault` | Hunt for broken links, orphan notes, stubs, and get massive mathematical token/word stats. |
@@ -198,6 +198,7 @@ obx serve /my/vault --allow-vault-switching --allowed-vaults my-notes,work,perso
 | `manage-templates` | Find and dynamically inject markdown blocks from your templates directory. |
 | `manage-mocs` | Auto-generate alphabetical directory indices or group unlinked notes into Maps of Content. |
 | `manage-canvas` | Create logic nodes and draw line edges across Obsidian JSON `.canvas` files. |
+| `refactor-notes` | Split notes by heading, merge multiple notes, or extract sections to new notes. |
 | `manage-vaults` | (Opt-in only) Dynamically remount the active server workspace without restarting. |
 
 > [!NOTE]

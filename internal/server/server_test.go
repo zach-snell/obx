@@ -46,8 +46,8 @@ func TestServerRegistration(t *testing.T) {
 
 	t.Logf("Found %d tools registered", len(result.Tools))
 
-	if len(result.Tools) != 13 {
-		t.Errorf("Expected 13 tools due to disable parameter, got %d", len(result.Tools))
+	if len(result.Tools) != 14 {
+		t.Errorf("Expected 14 tools due to disable parameter, got %d", len(result.Tools))
 	}
 
 	if toolMap["search-vault"] {
@@ -68,6 +68,7 @@ func TestServerRegistration(t *testing.T) {
 		"manage-links",
 		"bulk-operations",
 		"manage-templates",
+		"refactor-notes",
 	}
 
 	for _, name := range expectedTools {
@@ -115,8 +116,8 @@ func TestManageVaultsRegistration(t *testing.T) {
 		toolMap[tool.Name] = true
 	}
 
-	if len(result.Tools) != 15 {
-		t.Errorf("Expected 15 tools with vault switching enabled, got %d", len(result.Tools))
+	if len(result.Tools) != 16 {
+		t.Errorf("Expected 16 tools with vault switching enabled, got %d", len(result.Tools))
 	}
 
 	if !toolMap["manage-vaults"] {

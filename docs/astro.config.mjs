@@ -55,6 +55,7 @@ export default defineConfig({
 						{ label: 'manage-links', slug: 'mcp/manage-links' },
 						{ label: 'bulk-operations', slug: 'mcp/bulk-operations' },
 						{ label: 'manage-templates', slug: 'mcp/manage-templates' },
+						{ label: 'refactor-notes', slug: 'mcp/refactor-notes' },
 						{ label: 'manage-vaults', slug: 'mcp/manage-vaults' },
 					],
 				},

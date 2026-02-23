@@ -9,7 +9,7 @@ import (
 
 // ManageNotesMultiplexArgs multiplexed args
 type ManageNotesMultiplexArgs struct {
-	Action        string `json:"action" jsonschema:"Action to perform: 'read', 'write', 'delete', 'append', 'rename', 'duplicate', 'move'"`
+	Action        string `json:"action" jsonschema:"Action to perform: 'read', 'write', 'delete', 'append', 'rename', 'duplicate', 'move', 'list'"`
 	Path          string `json:"path,omitempty" jsonschema:"Path to the note relative to vault root"`
 	Content       string `json:"content,omitempty" jsonschema:"Content of the note"`
 	ExpectedMtime string `json:"expected_mtime,omitempty" jsonschema:"Expected file modification time (RFC3339Nano) for optimistic concurrency"`
@@ -24,6 +24,10 @@ type ManageNotesMultiplexArgs struct {
 	Source        string `json:"source,omitempty" jsonschema:"Source path"`
 	Destination   string `json:"destination,omitempty" jsonschema:"Destination path"`
 	UpdateLinks   bool   `json:"update_links,omitempty" jsonschema:"Whether to update links to this file (default true)"`
+	Directory     string `json:"directory,omitempty" jsonschema:"Directory path relative to vault root (for list action)"`
+	Limit         int    `json:"limit,omitempty" jsonschema:"Maximum number of notes to return (for list action, 0 = no limit)"`
+	Offset        int    `json:"offset,omitempty" jsonschema:"Number of notes to skip for pagination (for list action, default 0)"`
+	Mode          string `json:"mode,omitempty" jsonschema:"Response mode: compact (default) or detailed"`
 }
 
 // ManageNotesMultiplexHandler routes to the specific handler
@@ -79,6 +83,14 @@ func (v *Vault) ManageNotesMultiplexHandler(ctx context.Context, req *mcp.CallTo
 			DryRun:      args.DryRun,
 		}
 		return v.MoveNoteHandler(ctx, req, specificArgs)
+	case "list":
+		specificArgs := ListNotesArgs{
+			Directory: args.Directory,
+			Limit:     args.Limit,
+			Offset:    args.Offset,
+			Mode:      args.Mode,
+		}
+		return v.ListNotesHandler(ctx, req, specificArgs)
 	default:
 		return nil, nil, fmt.Errorf("unknown action: %s", args.Action)
 	}
@@ -137,7 +149,7 @@ func (v *Vault) EditNoteMultiplexHandler(ctx context.Context, req *mcp.CallToolR
 
 // SearchVaultMultiplexArgs multiplexed args
 type SearchVaultMultiplexArgs struct {
-	Action          string `json:"action" jsonschema:"Action to perform: 'search', 'advanced', 'date', 'regex', 'tags', 'headings', 'inline-fields'"`
+	Action          string `json:"action" jsonschema:"Action to perform: 'search', 'advanced', 'date', 'regex', 'tags', 'headings', 'inline-fields', 'frontmatter'"`
 	Query           string `json:"query,omitempty" jsonschema:"Search query"`
 	Directory       string `json:"directory,omitempty" jsonschema:"Directory to limit search to"`
 	Mode            string `json:"mode,omitempty" jsonschema:"Response mode: compact (default) or detailed"`
@@ -214,6 +226,12 @@ func (v *Vault) SearchVaultMultiplexHandler(ctx context.Context, req *mcp.CallTo
 			Directory: args.Directory,
 		}
 		return v.QueryInlineFieldsHandler(ctx, req, specificArgs)
+	case "frontmatter":
+		specificArgs := QueryFrontmatterArgs{
+			Query:     args.Query,
+			Directory: args.Directory,
+		}
+		return v.QueryFrontmatterHandler(ctx, req, specificArgs)
 	default:
 		return nil, nil, fmt.Errorf("unknown action: %s", args.Action)
 	}
@@ -328,7 +346,7 @@ func (v *Vault) ManageFoldersMultiplexHandler(ctx context.Context, req *mcp.Call
 
 // ManageFrontmatterMultiplexArgs multiplexed args
 type ManageFrontmatterMultiplexArgs struct {
-	Action        string `json:"action" jsonschema:"Action to perform: 'get', 'set', 'remove', 'add-alias', 'add-tag'"`
+	Action        string `json:"action" jsonschema:"Action to perform: 'get', 'set', 'remove', 'add-alias', 'add-tag', 'get-inline-fields', 'set-inline-field'"`
 	Path          string `json:"path,omitempty" jsonschema:"Path to the note"`
 	Key           string `json:"key,omitempty" jsonschema:"Frontmatter key"`
 	Value         string `json:"value,omitempty" jsonschema:"Value to set"`
@@ -374,6 +392,19 @@ func (v *Vault) ManageFrontmatterMultiplexHandler(ctx context.Context, req *mcp.
 			ExpectedMtime: args.ExpectedMtime,
 		}
 		return v.AddTagToFrontmatterHandler(ctx, req, specificArgs)
+	case "get-inline-fields":
+		specificArgs := GetInlineFieldsArgs{
+			Path: args.Path,
+		}
+		return v.GetInlineFieldsHandler(ctx, req, specificArgs)
+	case "set-inline-field":
+		specificArgs := SetInlineFieldArgs{
+			Path:          args.Path,
+			Key:           args.Key,
+			Value:         args.Value,
+			ExpectedMtime: args.ExpectedMtime,
+		}
+		return v.SetInlineFieldHandler(ctx, req, specificArgs)
 	default:
 		return nil, nil, fmt.Errorf("unknown action: %s", args.Action)
 	}
@@ -740,6 +771,61 @@ func (v *Vault) ManageTemplatesMultiplexHandler(ctx context.Context, req *mcp.Ca
 			Variables:      args.Variables,
 		}
 		return v.ApplyTemplateHandler(ctx, req, specificArgs)
+	default:
+		return nil, nil, fmt.Errorf("unknown action: %s", args.Action)
+	}
+}
+
+// RefactorNotesMultiplexArgs multiplexed args
+type RefactorNotesMultiplexArgs struct {
+	Action             string `json:"action" jsonschema:"Action to perform: 'split', 'merge', 'extract-section'"`
+	Path               string `json:"path,omitempty" jsonschema:"Source note path"`
+	Level              int    `json:"level,omitempty" jsonschema:"Heading level to split at (default: 2, for split action)"`
+	KeepOriginal       bool   `json:"keep_original,omitempty" jsonschema:"Keep extracted content in original note (for split action)"`
+	OutputDir          string `json:"output_dir,omitempty" jsonschema:"Directory for new notes (for split action)"`
+	DryRun             bool   `json:"dry_run,omitempty" jsonschema:"Preview changes without modifying files"`
+	Paths              string `json:"paths,omitempty" jsonschema:"Comma-separated list of notes to merge (for merge action)"`
+	Output             string `json:"output,omitempty" jsonschema:"Output note path"`
+	Separator          string `json:"separator,omitempty" jsonschema:"Separator between notes (for merge action)"`
+	DeleteOriginals    bool   `json:"delete_originals,omitempty" jsonschema:"Delete original notes after merge (for merge action)"`
+	AddHeadings        bool   `json:"add_headings,omitempty" jsonschema:"Add note names as headings (for merge action)"`
+	Heading            string `json:"heading,omitempty" jsonschema:"Heading to extract (for extract-section action)"`
+	RemoveFromOriginal bool   `json:"remove_from_original,omitempty" jsonschema:"Remove from source note (default true, for extract-section action)"`
+	AddLink            bool   `json:"add_link,omitempty" jsonschema:"Add link to new note in source (default true, for extract-section action)"`
+}
+
+// RefactorNotesMultiplexHandler routes to the specific handler
+func (v *Vault) RefactorNotesMultiplexHandler(ctx context.Context, req *mcp.CallToolRequest, args RefactorNotesMultiplexArgs) (*mcp.CallToolResult, any, error) {
+	switch args.Action {
+	case "split":
+		specificArgs := ExtractNoteArgs{
+			Path:         args.Path,
+			Level:        args.Level,
+			KeepOriginal: args.KeepOriginal,
+			OutputDir:    args.OutputDir,
+			DryRun:       args.DryRun,
+		}
+		return v.ExtractNoteHandler(ctx, req, specificArgs)
+	case "merge":
+		specificArgs := MergeNotesArgs{
+			Paths:           args.Paths,
+			Output:          args.Output,
+			Separator:       args.Separator,
+			DeleteOriginals: args.DeleteOriginals,
+			AddHeadings:     args.AddHeadings,
+			DryRun:          args.DryRun,
+		}
+		return v.MergeNotesHandler(ctx, req, specificArgs)
+	case "extract-section":
+		specificArgs := ExtractSectionArgs{
+			Path:               args.Path,
+			Heading:            args.Heading,
+			Output:             args.Output,
+			RemoveFromOriginal: args.RemoveFromOriginal,
+			AddLink:            args.AddLink,
+			DryRun:             args.DryRun,
+		}
+		return v.ExtractSectionHandler(ctx, req, specificArgs)
 	default:
 		return nil, nil, fmt.Errorf("unknown action: %s", args.Action)
 	}

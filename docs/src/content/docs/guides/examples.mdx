@@ -15,7 +15,7 @@ This guide shows practical examples of using obx with AI assistants.
 
 The AI will:
 1. Create/open today's daily note
-2. Run `list-tasks` with `status=open`
+2. Use `manage-tasks` with `action: "list"` and `status: "open"`
 3. Read yesterday's daily note for context
 
 ---
@@ -50,8 +50,8 @@ The AI will:
 **You**: "Add to my inbox: Research GraphQL vs REST for the new API"
 
 ```
-→ append-note: inbox.md
-→ Content: "- [ ] Research GraphQL vs REST for the new API"
+→ manage-notes action: "append", path: "inbox.md"
+→ content: "- [ ] Research GraphQL vs REST for the new API"
 ```
 
 ---
@@ -61,8 +61,8 @@ The AI will:
 **You**: "Create a new project note for 'Mobile App Redesign' with high priority, status planning, and due date March 15"
 
 The AI will:
-1. Create the note with `write-note`
-2. Set frontmatter properties:
+1. Create the note with `manage-notes` action: `"write"`
+2. Set frontmatter with `manage-frontmatter` action: `"set"`:
    - `priority: high`
    - `status: planning`
    - `due: 2024-03-15`
@@ -74,8 +74,8 @@ The AI will:
 **You**: "Find my note about the Q4 budget and update the status to approved"
 
 ```
-1. search-vault: "Q4 budget"
-2. set-frontmatter: path=found/note.md, key=status, value=approved
+1. search-vault action: "search", query: "Q4 budget"
+2. manage-frontmatter action: "set", path: "found/note.md", key: "status", value: "approved"
 ```
 
 ## Research Workflows
@@ -85,11 +85,11 @@ The AI will:
 **You**: "What do I know about machine learning? Show related notes and any gaps"
 
 The AI will:
-1. `search-vault`: "machine learning"
-2. `search-by-tags`: "machine-learning"
-3. `backlinks`: on main ML note
-4. `orphan-notes`: check for isolated ML content
-5. `suggest-links`: find potential connections
+1. `search-vault` action: `"search"`, query: "machine learning"
+2. `search-vault` action: `"tags"`, tags: "machine-learning"
+3. `manage-links` action: `"backlinks"` on main ML note
+4. `analyze-vault` action: `"orphan-notes"` to check for isolated ML content
+5. `manage-links` action: `"suggest"` to find potential connections
 
 ---
 
@@ -98,9 +98,9 @@ The AI will:
 **You**: "Create a MOC for my programming notes and connect it to my main index"
 
 ```
-1. generate-moc: directory=programming, output=programming/Programming MOC.md
-2. append-note: Add link to main index
-3. bulk-tag: Add #moc tag to the MOC
+1. manage-mocs action: "generate", directory: "programming", output: "programming/Programming MOC.md"
+2. manage-notes action: "append" — add link to main index
+3. bulk-operations action: "tag" — add #moc tag to the MOC
 ```
 
 ---
@@ -110,9 +110,9 @@ The AI will:
 **You**: "What concepts in my vault need more development?"
 
 ```
-1. find-stubs: max_words=50
-2. broken-links: Find mentioned-but-not-created notes
-3. orphan-notes: Find disconnected content
+1. analyze-vault action: "find-stubs", max_words: 50
+2. analyze-vault action: "broken-links" — find mentioned-but-not-created notes
+3. analyze-vault action: "orphan-notes" — find disconnected content
 ```
 
 ## Task Management
@@ -121,7 +121,7 @@ The AI will:
 
 **You**: "Show me all open tasks grouped by priority"
 
-The AI will use `list-tasks` and organize results by priority tags or frontmatter.
+The AI will use `manage-tasks` action: `"list"` and organize results by priority tags or frontmatter.
 
 ---
 
@@ -130,9 +130,9 @@ The AI will use `list-tasks` and organize results by priority tags or frontmatte
 **You**: "Find all tasks older than 30 days and mark them for review"
 
 ```
-1. list-tasks: status=open
+1. manage-tasks action: "list", status: "open"
 2. Filter by date in task text or note modified date
-3. bulk-tag: Add #needs-review to affected notes
+3. bulk-operations action: "tag" — add #needs-review to affected notes
 ```
 
 ---
@@ -142,8 +142,8 @@ The AI will use `list-tasks` and organize results by priority tags or frontmatte
 **You**: "Show all tasks in my 'Website Redesign' project"
 
 ```
-1. search-vault: In projects/Website Redesign/
-2. list-tasks: directory=projects/Website Redesign
+1. search-vault action: "search", directory: "projects/Website Redesign"
+2. manage-tasks action: "list", directory: "projects/Website Redesign"
 ```
 
 ## Content Organization
@@ -157,7 +157,7 @@ The AI might:
 2. Analyze content and tags
 3. Suggest categorization
 4. Create new folders
-5. `bulk-move` notes to appropriate locations
+5. `bulk-operations` action: `"move"` notes to appropriate locations
 
 ---
 
@@ -166,7 +166,7 @@ The AI might:
 **You**: "I have tags #todo, #TODO, and #to-do. Standardize them all to #todo"
 
 ```
-1. search-by-tags: each variant
+1. search-vault action: "tags" — search each variant
 2. For each note: Update tag format
 3. Report: "Standardized 23 notes to use #todo"
 ```
@@ -178,10 +178,10 @@ The AI might:
 **You**: "Archive all notes in projects/ that haven't been modified in 6 months"
 
 ```
-1. find-outdated: days=180, directory=projects
-2. bulk-move: destination=archive/projects
-3. bulk-set-frontmatter: status=archived
-4. bulk-tag: add #archived
+1. analyze-vault action: "find-outdated", days: 180, directory: "projects"
+2. bulk-operations action: "move", destination: "archive/projects"
+3. bulk-operations action: "set-frontmatter", key: "status", value: "archived"
+4. bulk-operations action: "tag", tag: "#archived"
 ```
 
 ## Meeting Notes
@@ -191,9 +191,9 @@ The AI might:
 **You**: "Prepare for my meeting with the design team - create a note from the meeting template and pull in context from recent design discussions"
 
 ```
-1. apply-template: meeting → meetings/Design Team 2024-01-15.md
-2. search-vault: "design" in recent notes
-3. append-note: Add relevant context to meeting note
+1. manage-templates action: "apply", template: "meeting", path: "meetings/Design Team 2024-01-15.md"
+2. search-vault action: "search", query: "design"
+3. manage-notes action: "append" — add relevant context to meeting note
 ```
 
 ---
@@ -214,7 +214,7 @@ The AI will:
 **You**: "Show me all draft articles ready for review"
 
 ```
-query-frontmatter: status=draft
+search-vault action: "frontmatter", query: "status=draft"
 → Filter by: word count > 500, has all required sections
 → Present list for review
 ```
@@ -239,11 +239,11 @@ query-frontmatter: status=draft
 **You**: "Run a full health check on my vault"
 
 The AI will:
-1. `vault-stats`: Overall metrics
-2. `orphan-notes`: Disconnected content
-3. `broken-links`: Missing link targets
-4. `find-stubs`: Underdeveloped notes
-5. `find-outdated`: Stale content
+1. `analyze-vault` action: `"stats"` — overall metrics
+2. `analyze-vault` action: `"orphan-notes"` — disconnected content
+3. `analyze-vault` action: `"broken-links"` — missing link targets
+4. `analyze-vault` action: `"find-stubs"` — underdeveloped notes
+5. `analyze-vault` action: `"find-outdated"` — stale content
 6. Report findings and suggest improvements
 
 <Aside type="tip">

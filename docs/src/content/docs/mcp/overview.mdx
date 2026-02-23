@@ -1,15 +1,15 @@
 ---
 title: MCP Reference Overview
-description: Overview of the 14 multiplexed tools available directly in the Model Context Protocol.
+description: Overview of the 16 multiplexed tools available directly in the Model Context Protocol.
 ---
 
 import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-While the core logic of `obx` supports over 70 distinct actions, exposing all of those to modern LLMs (like Claude or GPT-4o) frequently causes the intelligent agent to breach its hard tool limits when run alongside other MCP servers.
+While the core logic of `obx` supports 72 distinct actions, exposing all of those to modern LLMs (like Claude or GPT-4o) frequently causes the intelligent agent to breach its hard tool limits when run alongside other MCP servers.
 
-To maximize stability and ensure your assistant can handle complex multi-server workflows, `obx` multiplexes these 70+ actions into **14 unified MCP Tools**.
+To maximize stability and ensure your assistant can handle complex multi-server workflows, `obx` multiplexes these 72 actions into **16 unified MCP Tools**.
 
-When your AI assistant needs to do something, it calls one of these 14 parent tools and passes an `action` argument (e.g. `action: "read"` vs `action: "write"`).
+When your AI assistant needs to do something, it calls one of these 16 parent tools and passes an `action` argument (e.g. `action: "read"` vs `action: "write"`).
 
 ## Unified Tool Groups
 
@@ -83,6 +83,11 @@ When your AI assistant needs to do something, it calls one of these 14 parent to
     title="read-batch"
     description="Ingest multiple notes at once, or extract specific headings for summaries."
     href="/obx/mcp/read-batch"
+  />
+  <LinkCard
+    title="refactor-notes"
+    description="Split notes by heading, merge multiple notes, and extract sections to new notes."
+    href="/obx/mcp/refactor-notes"
   />
   <LinkCard
     title="manage-vaults"

@@ -30,7 +30,7 @@ obx recognizes and preserves this syntax.
 
 ## Task Tools
 
-### list-tasks
+### manage-tasks action: "list"
 
 List all tasks across your vault.
 
@@ -44,7 +44,7 @@ List all tasks across your vault.
 - "List completed tasks in projects/"
 - "What tasks do I have?"
 
-### toggle-task
+### manage-tasks action: "toggle"
 
 Toggle a task's completion status.
 
@@ -96,7 +96,7 @@ Track tasks within a project:
 > "Show all tasks in my 'Website Redesign' project"
 
 ```
-list-tasks: directory=projects/Website Redesign
+manage-tasks action: "list", directory: "projects/Website Redesign"
 ```
 
 ## Task Organization Patterns
@@ -151,13 +151,13 @@ Tasks in daily notes:
 
 > "Find all tasks tagged with #urgent"
 
-Uses `search-vault` with task checkbox pattern + tag.
+Uses `search-vault` action: `"search"` with task checkbox pattern + tag.
 
 ### By Project
 
 > "Show tasks in the marketing project"
 
-Uses `list-tasks` with directory filter.
+Uses `manage-tasks` action: `"list"` with directory filter.
 
 ### By Date
 
@@ -259,7 +259,7 @@ If you use Dataview, tasks can have inline fields:
 Query with:
 > "Find tasks where priority is high"
 
-Uses `query-inline-fields` to find matching tasks.
+Uses `search-vault` action: `"inline-fields"` to find matching tasks.
 
 ## Best Practices
 

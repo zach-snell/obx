@@ -205,8 +205,9 @@ func (v *Vault) ListNotesHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		next := map[string]any(nil)
 		if offset+len(notes) < totalCount {
 			next = map[string]any{
-				"tool": "list-notes",
+				"tool": "manage-notes",
 				"args": map[string]any{
+					"action":    "list",
 					"directory": dir,
 					"offset":    offset + len(notes),
 					"limit":     limit,

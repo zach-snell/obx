@@ -46,7 +46,7 @@ func registerTools(s *mcp.Server, v *vault.Vault, disabledTools []string, allowV
 	if !isToolDisabled("manage-notes", disabledTools) {
 		mcp.AddTool(s, &mcp.Tool{
 			Name:        "manage-notes",
-			Description: "Unified tool for reading, writing, moving, deleting, renaming, and appending to notes",
+			Description: "Unified tool for listing, reading, writing, moving, deleting, renaming, and appending to notes",
 		}, v.ManageNotesMultiplexHandler)
 	}
 
@@ -60,7 +60,7 @@ func registerTools(s *mcp.Server, v *vault.Vault, disabledTools []string, allowV
 	if !isToolDisabled("search-vault", disabledTools) {
 		mcp.AddTool(s, &mcp.Tool{
 			Name:        "search-vault",
-			Description: "Unified search tool spanning text query, advanced block search, regex, dates, tags, and inline-fields",
+			Description: "Unified search tool spanning text query, advanced block search, regex, dates, tags, inline-fields, and frontmatter queries",
 		}, v.SearchVaultMultiplexHandler)
 	}
 
@@ -81,7 +81,7 @@ func registerTools(s *mcp.Server, v *vault.Vault, disabledTools []string, allowV
 	if !isToolDisabled("manage-frontmatter", disabledTools) {
 		mcp.AddTool(s, &mcp.Tool{
 			Name:        "manage-frontmatter",
-			Description: "Unified tool for manipulating note frontmatter properties, tags, and aliases",
+			Description: "Unified tool for manipulating note frontmatter properties, tags, aliases, and inline fields",
 		}, v.ManageFrontmatterMultiplexHandler)
 	}
 
@@ -139,5 +139,12 @@ func registerTools(s *mcp.Server, v *vault.Vault, disabledTools []string, allowV
 			Name:        "manage-templates",
 			Description: "Unified tool for listing, retrieving, and applying markdown templates",
 		}, v.ManageTemplatesMultiplexHandler)
+	}
+
+	if !isToolDisabled("refactor-notes", disabledTools) {
+		mcp.AddTool(s, &mcp.Tool{
+			Name:        "refactor-notes",
+			Description: "Unified tool for structural note refactoring: split notes by heading, merge multiple notes, and extract sections to new notes",
+		}, v.RefactorNotesMultiplexHandler)
 	}
 }

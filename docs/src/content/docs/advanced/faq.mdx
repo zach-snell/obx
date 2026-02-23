@@ -9,7 +9,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 ### What is obx?
 
-obx is a powerful CLI and MCP (Model Context Protocol) server that lets AI assistants interact with your Obsidian vault. It provides 14 unified tools (multiplexing 70 distinct actions) for reading, writing, searching, and organizing notes.
+obx is a powerful CLI and MCP (Model Context Protocol) server that lets AI assistants interact with your Obsidian vault. It provides 16 unified tools (multiplexing 72 distinct actions) for reading, writing, searching, and organizing notes.
 
 ### Do I need Obsidian installed?
 
@@ -85,12 +85,12 @@ Yes! You have two main options:
 Ask your AI assistant:
 > "What tools are available for my Obsidian vault?"
 
-Or check the [Tools Overview](/obx/tools/overview).
+Or check the [Tools Overview](/obx/mcp/overview).
 
 ### Why isn't the AI finding my note?
 
 Common causes:
-- Path might be different than expected (use `list-notes`)
+- Path might be different than expected (use `manage-notes` action: `"list"`)
 - Search is case-insensitive but might miss partial matches
 - Note might be in a subdirectory
 
@@ -135,7 +135,7 @@ No. obx only handles text files (Markdown, JSON for canvas). Images and PDFs are
 
 ### Does it support wiki-style links?
 
-Yes! obx fully supports `[[wikilinks]]` and `[[wikilinks|with aliases]]`. Tools like `backlinks`, `forward-links`, and `rename-note` understand and update wikilinks.
+Yes! obx fully supports `[[wikilinks]]` and `[[wikilinks|with aliases]]`. Tools like `manage-links` (backlinks, forward-links) and `manage-notes` (rename) understand and update wikilinks.
 
 ## Troubleshooting
 
@@ -176,7 +176,7 @@ For large vaults (10,000+ notes), some operations like full-vault search may tak
 | Requires Obsidian | No | Yes |
 | Runtime | Single binary | Obsidian running |
 | Protocol | MCP (stdio + HTTP Streamable) | HTTP REST |
-| Tool count | 14 unified (70 actions) | Varies |
+| Tool count | 16 unified (72 actions) | Varies |
 
 ### vs. Other MCP Servers
 

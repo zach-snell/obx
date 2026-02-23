@@ -106,7 +106,7 @@ Here's a typical interaction:
 
 **You**: "Create a new project note for 'Website Redesign' with status draft and priority high"
 
-**Assistant**: *Uses `write-note` and `set-frontmatter` tools*
+**Assistant**: *Uses `manage-notes` action: "write" and `manage-frontmatter` action: "set"*
 
 > Created `projects/Website Redesign.md` with:
 > - Status: draft
@@ -114,7 +114,7 @@ Here's a typical interaction:
 
 **You**: "Add a checklist of tasks for this project"
 
-**Assistant**: *Uses `append-note` tool*
+**Assistant**: *Uses `manage-notes` action: "append"*
 
 > Added tasks to the note:
 > - [ ] Define requirements
@@ -125,6 +125,6 @@ Here's a typical interaction:
 
 ## Next Steps
 
-- Explore the [Tools Reference](/obx/tools/overview) to see exactly how the 14 unified tools expose over 70 distinct file actions.
+- Explore the [Tools Reference](/obx/mcp/overview) to see exactly how the 16 unified tools expose over 72 distinct actions.
 - Learn about [Task Management](/obx/guides/tasks) workflows
 - Set up [Templates](/obx/guides/templates) for consistent note creation
