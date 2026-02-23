@@ -475,6 +475,37 @@ Questions.
 		}
 	})
 
+	t.Run("auto-strips duplicate heading from content", func(t *testing.T) {
+		v, dir := setupTestVault(t)
+		writeTestFile(t, dir, "doc.md", testDoc)
+
+		// LLM agents commonly include the heading in their replacement content.
+		// The tool should auto-strip it to prevent duplication.
+		args := ReplaceSectionArgs{
+			Path:    "doc.md",
+			Heading: "Installation",
+			Content: "## Installation\n\nNew install instructions.",
+		}
+
+		result, _, err := v.ReplaceSectionHandler(ctx, nil, args)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.IsError {
+			t.Fatalf("expected success, got error: %v", result.Content)
+		}
+
+		content := readTestFile(t, dir, "doc.md")
+		if !strings.Contains(content, "New install instructions.") {
+			t.Error("new content not found")
+		}
+		// The heading should appear exactly once
+		count := strings.Count(content, "## Installation")
+		if count != 1 {
+			t.Errorf("heading should appear exactly once, found %d times", count)
+		}
+	})
+
 	t.Run("with context_lines", func(t *testing.T) {
 		v, dir := setupTestVault(t)
 		writeTestFile(t, dir, "doc.md", testDoc)

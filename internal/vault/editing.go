@@ -260,8 +260,20 @@ func (v *Vault) ReplaceSectionHandler(ctx context.Context, req *mcp.CallToolRequ
 	contentStart := sectionStart + 1
 	linesReplaced := sectionEnd - contentStart
 
-	// Normalize new content: ensure blank line after heading, trim trailing newlines
+	// Auto-strip the heading from content if the caller included it (common with LLM agents).
+	// The heading line is already preserved in lines[:contentStart], so including it in
+	// sectionContent would cause duplication.
 	normalizedContent := strings.TrimRight(sectionContent, "\n")
+	contentLines := strings.Split(normalizedContent, "\n")
+	if len(contentLines) > 0 {
+		firstLine := strings.TrimSpace(contentLines[0])
+		if m := headingRegex.FindStringSubmatch(firstLine); m != nil {
+			if strings.EqualFold(strings.TrimSpace(m[2]), heading) {
+				contentLines = contentLines[1:]
+				normalizedContent = strings.Join(contentLines, "\n")
+			}
+		}
+	}
 	newContentLines := strings.Split("\n"+normalizedContent+"\n", "\n")
 
 	// Build new file: before heading + heading + new content + after section
