@@ -1,0 +1,57 @@
+---
+title: obx vault
+description: Manage named vault configurations globally.
+---
+
+The `obx vault` command allows you to define aliases for your Obsidian vaults. This enables you to switch between vaults easily and configure dynamic vault switching for the MCP server.
+
+Configuration is stored in `~/.config/obx/config.json`.
+
+## Usage
+
+```bash
+obx vault [command]
+```
+
+## Available Commands
+
+### add
+
+Registers a new vault alias globally.
+
+```bash
+obx vault add my-notes /Users/zach/Documents/MyNotes
+```
+
+### list
+
+Lists all established vault aliases and displays the currently active default vault.
+
+```bash
+obx vault list
+```
+
+Output:
+```text
+Available vaults:
+  my-notes: /Users/zach/Documents/MyNotes
+  work: /Users/zach/Documents/WorkVault (active)
+```
+
+### switch
+
+Changes the default active vault for the CLI. If `OBSIDIAN_VAULT_PATH` is not set and no path argument is provided to a command, `obx` will use this active vault.
+
+```bash
+obx vault switch my-notes
+```
+
+## Dynamic Vault Switching
+
+These aliases are not just for CLI convenience. If you want your AI assistant to switch between multiple vaults autonomously over the MCP protocol without restarting the server, you can pass these aliases to `obx serve`:
+
+```bash
+obx serve --allow-vault-switching --allowed-vaults my-notes,work
+```
+
+This ensures the agent can only access paths you have explicitly authorized.

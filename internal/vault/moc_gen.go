@@ -23,9 +23,9 @@ type noteInfo struct {
 
 // collectNotes gathers note info from a directory
 func (v *Vault) collectNotes(dir string, recursive bool) ([]noteInfo, error) {
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
 	}
 
 	if !v.isPathSafe(searchPath) {
@@ -57,7 +57,7 @@ func (v *Vault) collectNotes(dir string, recursive bool) ([]noteInfo, error) {
 		}
 
 		contentStr := string(content)
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 		name := strings.TrimSuffix(filepath.Base(path), ".md")
 
 		title := ExtractH1Title(contentStr)
@@ -88,7 +88,7 @@ func (v *Vault) writeGeneratedFile(output, content, fileType string, noteCount i
 	if !strings.HasSuffix(output, ".md") {
 		output += ".md"
 	}
-	fullPath := filepath.Join(v.path, output)
+	fullPath := filepath.Join(v.GetPath(), output)
 	if !v.isPathSafe(fullPath) {
 		return nil, fmt.Errorf("output path must be within vault")
 	}
@@ -265,7 +265,7 @@ func (v *Vault) UpdateMOCHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		mocPath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, mocPath)
+	fullPath := filepath.Join(v.GetPath(), mocPath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}

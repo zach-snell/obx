@@ -66,7 +66,7 @@ func (v *Vault) ReadNotesHandler(ctx context.Context, req *mcp.CallToolRequest, 
 	successCount := 0
 
 	for _, notePath := range paths {
-		fullPath := filepath.Join(v.path, notePath)
+		fullPath := filepath.Join(v.GetPath(), notePath)
 		if !v.isPathSafe(fullPath) {
 			fmt.Fprintf(&sb, "## %s\n\n**Error:** path must be within vault\n\n---\n\n", notePath)
 			continue
@@ -127,7 +127,7 @@ func (v *Vault) GetNoteSummaryHandler(ctx context.Context, req *mcp.CallToolRequ
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -207,7 +207,7 @@ func (v *Vault) GetSectionHandler(ctx context.Context, req *mcp.CallToolRequest,
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -256,7 +256,7 @@ func (v *Vault) GetHeadingsHandler(ctx context.Context, req *mcp.CallToolRequest
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -305,9 +305,12 @@ func (v *Vault) SearchHeadingsHandler(ctx context.Context, req *mcp.CallToolRequ
 	level := args.Level
 	dir := args.Directory
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
+	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
 	}
 
 	queryLower := strings.ToLower(query)
@@ -329,7 +332,7 @@ func (v *Vault) SearchHeadingsHandler(ctx context.Context, req *mcp.CallToolRequ
 			return nil
 		}
 
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 		body := RemoveFrontmatter(string(content))
 		headings := extractHeadings(body)
 

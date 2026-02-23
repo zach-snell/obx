@@ -56,9 +56,12 @@ type CanvasEdge struct {
 func (v *Vault) ListCanvasesHandler(ctx context.Context, req *mcp.CallToolRequest, args ListDirsArgs) (*mcp.CallToolResult, any, error) {
 	dir := args.Directory
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
+	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
 	}
 
 	var canvases []string
@@ -68,7 +71,7 @@ func (v *Vault) ListCanvasesHandler(ctx context.Context, req *mcp.CallToolReques
 			return nil
 		}
 		if strings.HasSuffix(path, ".canvas") {
-			relPath, _ := filepath.Rel(v.path, path)
+			relPath, _ := filepath.Rel(v.GetPath(), path)
 			canvases = append(canvases, relPath)
 		}
 		return nil
@@ -107,7 +110,7 @@ func (v *Vault) ReadCanvasHandler(ctx context.Context, req *mcp.CallToolRequest,
 		canvasPath += ".canvas"
 	}
 
-	fullPath := filepath.Join(v.path, canvasPath)
+	fullPath := filepath.Join(v.GetPath(), canvasPath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -214,7 +217,7 @@ func (v *Vault) CreateCanvasHandler(ctx context.Context, req *mcp.CallToolReques
 		canvasPath += ".canvas"
 	}
 
-	fullPath := filepath.Join(v.path, canvasPath)
+	fullPath := filepath.Join(v.GetPath(), canvasPath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -283,7 +286,7 @@ func (v *Vault) AddCanvasNodeHandler(ctx context.Context, req *mcp.CallToolReque
 		canvasPath += ".canvas"
 	}
 
-	fullPath := filepath.Join(v.path, canvasPath)
+	fullPath := filepath.Join(v.GetPath(), canvasPath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -358,7 +361,7 @@ func (v *Vault) AddCanvasEdgeHandler(ctx context.Context, req *mcp.CallToolReque
 		canvasPath += ".canvas"
 	}
 
-	fullPath := filepath.Join(v.path, canvasPath)
+	fullPath := filepath.Join(v.GetPath(), canvasPath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}

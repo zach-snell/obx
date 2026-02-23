@@ -1,11 +1,11 @@
 ---
 title: Quick Start
-description: Get up and running with obsidian-go-mcp in minutes.
+description: Get up and running with obx in minutes.
 ---
 
 import { Steps, Code, Tabs, TabItem } from '@astrojs/starlight/components';
 
-This guide will help you set up obsidian-go-mcp and start using it with your AI assistant.
+This guide will help you set up obx and start using it with your AI assistant.
 
 ## Prerequisites
 
@@ -16,22 +16,22 @@ This guide will help you set up obsidian-go-mcp and start using it with your AI 
 
 <Steps>
 
-1. **Install obsidian-go-mcp**
+1. **Install obx**
 
    <Tabs>
      <TabItem label="macOS/Linux">
        ```bash
-       curl -sSL https://raw.githubusercontent.com/zach-snell/obsidian-go-mcp/main/install.sh | bash
+       curl -sSL https://raw.githubusercontent.com/zach-snell/obx/main/install.sh | bash
        ```
      </TabItem>
      <TabItem label="Homebrew">
        ```bash
-       brew install zach-snell/tap/obsidian-go-mcp
+       brew install zach-snell/tap/obx
        ```
      </TabItem>
      <TabItem label="Go">
        ```bash
-       go install github.com/zach-snell/obsidian-go-mcp@latest
+       go install github.com/zach-snell/obx@latest
        ```
      </TabItem>
    </Tabs>
@@ -51,8 +51,8 @@ This guide will help you set up obsidian-go-mcp and start using it with your AI 
    {
      "mcpServers": {
        "obsidian": {
-         "command": "obsidian-go-mcp",
-         "args": ["/path/to/your/vault"]
+         "command": "obx",
+         "args": ["serve", "/path/to/your/vault"]
        }
      }
    }
@@ -125,6 +125,6 @@ Here's a typical interaction:
 
 ## Next Steps
 
-- Explore the [Tools Reference](/obsidian-go-mcp/tools/overview) to see all 70 available tools
-- Learn about [Task Management](/obsidian-go-mcp/guides/tasks) workflows
-- Set up [Templates](/obsidian-go-mcp/guides/templates) for consistent note creation
+- Explore the [Tools Reference](/obx/tools/overview) to see exactly how the 14 unified tools expose over 70 distinct file actions.
+- Learn about [Task Management](/obx/guides/tasks) workflows
+- Set up [Templates](/obx/guides/templates) for consistent note creation

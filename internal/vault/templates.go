@@ -24,7 +24,10 @@ func (v *Vault) ListTemplatesHandler(ctx context.Context, req *mcp.CallToolReque
 		folder = "templates"
 	}
 
-	searchPath := filepath.Join(v.path, folder)
+	searchPath := filepath.Join(v.GetPath(), folder)
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("templates folder must be within vault")
+	}
 
 	if _, err := os.Stat(searchPath); os.IsNotExist(err) {
 		return &mcp.CallToolResult{
@@ -84,7 +87,7 @@ func (v *Vault) GetTemplateHandler(ctx context.Context, req *mcp.CallToolRequest
 		name += ".md"
 	}
 
-	templatePath := filepath.Join(v.path, folder, name)
+	templatePath := filepath.Join(v.GetPath(), folder, name)
 
 	if !v.isPathSafe(templatePath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
@@ -154,7 +157,7 @@ func (v *Vault) ApplyTemplateHandler(ctx context.Context, req *mcp.CallToolReque
 	}
 
 	// Read template
-	templatePath := filepath.Join(v.path, templateFolder, templateName)
+	templatePath := filepath.Join(v.GetPath(), templateFolder, templateName)
 	if !v.isPathSafe(templatePath) {
 		return nil, nil, fmt.Errorf("template path must be within vault")
 	}
@@ -168,7 +171,7 @@ func (v *Vault) ApplyTemplateHandler(ctx context.Context, req *mcp.CallToolReque
 	}
 
 	// Check target doesn't exist
-	fullTargetPath := filepath.Join(v.path, targetPath)
+	fullTargetPath := filepath.Join(v.GetPath(), targetPath)
 	if !v.isPathSafe(fullTargetPath) {
 		return nil, nil, fmt.Errorf("target path must be within vault")
 	}

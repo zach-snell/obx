@@ -1,21 +1,21 @@
 ---
 title: Security
-description: Security considerations for obsidian-go-mcp.
+description: Security considerations for obx.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-This page covers security considerations when using obsidian-go-mcp.
+This page covers security considerations when using obx.
 
 ## Access Model
 
 ### File System Access
 
-obsidian-go-mcp has **read and write access** to your vault directory and all subdirectories. It cannot access files outside the vault path you specify.
+obx has **read and write access** to your vault directory and all subdirectories. It cannot access files outside the vault path you specify.
 
 ```bash
 # Server only accesses /path/to/vault and below
-obsidian-go-mcp /path/to/vault
+obx /path/to/vault
 ```
 
 ### No Network Access
@@ -24,7 +24,7 @@ The MCP server itself makes no network connections. All operations are local fil
 
 ### No Obsidian Access
 
-obsidian-go-mcp works directly with files. It does not:
+obx works directly with files. It does not:
 - Connect to Obsidian
 - Access Obsidian's internal databases
 - Require Obsidian to be running
@@ -33,12 +33,12 @@ obsidian-go-mcp works directly with files. It does not:
 ## AI Assistant Considerations
 
 <Aside type="caution">
-Your AI assistant (Claude, etc.) can use obsidian-go-mcp tools to read and modify your vault. Consider what sensitive information might be in your notes.
+Your AI assistant (Claude, etc.) can use obx tools to read and modify your vault. Consider what sensitive information might be in your notes.
 </Aside>
 
 ### What the AI Can Access
 
-When you use obsidian-go-mcp with an AI assistant, the AI can:
+When you use obx with an AI assistant, the AI can:
 
 - **Read** any note in your vault
 - **Search** across all content
@@ -118,7 +118,7 @@ The MCP protocol uses **stdio** (standard input/output) for communication. There
 
 ### Process Isolation
 
-obsidian-go-mcp runs as a separate process:
+obx runs as a separate process:
 - Spawned by your MCP client
 - Communicates via stdin/stdout
 - Terminates when client disconnects
@@ -137,7 +137,7 @@ The server:
 Run with minimal required permissions:
 
 ```bash
-# The user running obsidian-go-mcp needs:
+# The user running obx needs:
 # - Read access to vault (for all operations)
 # - Write access to vault (for modifications)
 ```

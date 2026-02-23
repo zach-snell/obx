@@ -115,12 +115,13 @@ func (v *Vault) EditNoteHandler(ctx context.Context, req *mcp.CallToolRequest, a
 	replacementText := args.NewText
 	replaceAll := args.ReplaceAll
 	contextN := args.ContextLines
+	expectedMtime := args.ExpectedMtime
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -131,6 +132,9 @@ func (v *Vault) EditNoteHandler(ctx context.Context, req *mcp.CallToolRequest, a
 			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
 		return nil, nil, fmt.Errorf("failed to read note: %v", err)
+	}
+	if err := ensureExpectedMtime(fullPath, expectedMtime); err != nil {
+		return nil, nil, err
 	}
 
 	contentStr := string(content)
@@ -196,12 +200,13 @@ func (v *Vault) ReplaceSectionHandler(ctx context.Context, req *mcp.CallToolRequ
 	heading := args.Heading
 	sectionContent := args.Content
 	contextN := args.ContextLines
+	expectedMtime := args.ExpectedMtime
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -212,6 +217,9 @@ func (v *Vault) ReplaceSectionHandler(ctx context.Context, req *mcp.CallToolRequ
 			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
 		return nil, nil, fmt.Errorf("failed to read note: %v", err)
+	}
+	if err := ensureExpectedMtime(fullPath, expectedMtime); err != nil {
+		return nil, nil, err
 	}
 
 	lines := strings.Split(string(content), "\n")
@@ -298,34 +306,34 @@ func (v *Vault) AppendNoteHandler(ctx context.Context, req *mcp.CallToolRequest,
 	after := args.After
 	before := args.Before
 	contextN := args.ContextLines
+	expectedMtime := args.ExpectedMtime
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
 
 	// Create if not exists (only for default append or simple path)
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
-			return nil, nil, fmt.Errorf("failed to create directory: %v", err)
+		result, createErr := createNewNote(fullPath, notePath, content, expectedMtime)
+		if createErr != nil {
+			return nil, nil, createErr
 		}
-		if err := os.WriteFile(fullPath, []byte(content), 0o600); err != nil {
-			return nil, nil, fmt.Errorf("failed to write note: %v", err)
+		if result != nil {
+			return result, nil, nil
 		}
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Created new note: %s", notePath)},
-			},
-		}, nil, nil
 	}
 
 	fileContent, err := os.ReadFile(fullPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read note: %v", err)
+	}
+	if err := ensureExpectedMtime(fullPath, expectedMtime); err != nil {
+		return nil, nil, err
 	}
 	lines := strings.Split(string(fileContent), "\n")
 	newLines := strings.Split(content, "\n")
@@ -421,6 +429,25 @@ func buildFinalLines(lines, newLines []string, insertIndex int, insertMode strin
 	return result
 }
 
+// createNewNote handles the "file doesn't exist" path for AppendNoteHandler.
+// Returns a result if the note was created, or nil if the caller should continue.
+func createNewNote(fullPath, notePath, content, expectedMtime string) (*mcp.CallToolResult, error) {
+	if expectedMtime != "" {
+		return nil, fmt.Errorf("target does not exist for expected_mtime check")
+	}
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create directory: %v", err)
+	}
+	if err := os.WriteFile(fullPath, []byte(content), 0o600); err != nil {
+		return nil, fmt.Errorf("failed to write note: %v", err)
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: fmt.Sprintf("Created new note: %s", notePath)},
+		},
+	}, nil
+}
+
 // findTargetLine finds the line index matching the target string (heading or text)
 func findTargetLine(lines []string, target string) (int, error) {
 	targetLower := strings.ToLower(target)
@@ -461,12 +488,14 @@ func (v *Vault) BatchEditNoteHandler(ctx context.Context, req *mcp.CallToolReque
 	notePath := args.Path
 	edits := args.Edits
 	contextN := args.ContextLines
+	dryRun := args.DryRun
+	expectedMtime := args.ExpectedMtime
 
 	if !strings.HasSuffix(notePath, ".md") {
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -482,6 +511,9 @@ func (v *Vault) BatchEditNoteHandler(ctx context.Context, req *mcp.CallToolReque
 			return nil, nil, fmt.Errorf("note not found: %s", notePath)
 		}
 		return nil, nil, fmt.Errorf("failed to read note: %v", err)
+	}
+	if err := ensureExpectedMtime(fullPath, expectedMtime); err != nil {
+		return nil, nil, err
 	}
 
 	contentStr := string(content)
@@ -503,13 +535,19 @@ func (v *Vault) BatchEditNoteHandler(ctx context.Context, req *mcp.CallToolReque
 		result = result[:le.offset] + le.NewText + result[le.offset+len(le.OldText):]
 	}
 
-	if err := os.WriteFile(fullPath, []byte(result), 0o600); err != nil {
-		return nil, nil, fmt.Errorf("failed to write note: %v", err)
+	if !dryRun {
+		if err := os.WriteFile(fullPath, []byte(result), 0o600); err != nil {
+			return nil, nil, fmt.Errorf("failed to write note: %v", err)
+		}
 	}
 
 	// Build response
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "Applied %d edit(s) to %s", len(edits), notePath)
+	if dryRun {
+		fmt.Fprintf(&sb, "Dry run: would apply %d edit(s) to %s", len(edits), notePath)
+	} else {
+		fmt.Fprintf(&sb, "Applied %d edit(s) to %s", len(edits), notePath)
+	}
 
 	if contextN > 0 && len(located) > 0 {
 		// Show context around the first edit (by file position, which is last in our sorted slice)

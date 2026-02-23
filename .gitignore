@@ -29,3 +29,4 @@ coverage.html
 
 # Local test vault (if any)
 .vault/
+/vault/

@@ -1,0 +1,37 @@
+---
+title: obx daily
+description: Manage daily notes from the command line.
+---
+
+The `obx daily` command is a shortcut for immediately creating or appending to today's daily note in your Obsidian vault.
+
+## Usage
+
+```bash
+obx daily "Your thought or task here" [flags] [vault_path]
+```
+
+## Options
+
+| Flag | Shorthand | Description | Default |
+|------|-----------|-------------|---------|
+| `--folder` | `-d` | Target folder for daily notes | `daily` |
+| `--format` | `-f` | Date format string (Go `time` package format) | `2006-01-02` |
+
+## Examples
+
+### Appending a thought
+
+```bash
+obx daily "Remember to check the pipeline logs"
+```
+
+If your daily note for today (e.g., `daily/2023-10-27.md`) exists, this will append the text to the bottom. If it doesn't exist, `obx` will create it and insert the text.
+
+### Custom Formatting
+
+To use a different folder structure or date format:
+
+```bash
+obx daily "Completed project review" --folder "Journal/2023" --format "01-02-2006"
+```

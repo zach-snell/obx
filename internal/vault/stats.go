@@ -131,9 +131,12 @@ func (s *vaultStats) formatAverages(sb *strings.Builder) {
 func (v *Vault) VaultStatsHandler(ctx context.Context, req *mcp.CallToolRequest, args VaultStatsArgs) (*mcp.CallToolResult, any, error) {
 	dir := args.Directory
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
+	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
 	}
 
 	stats := &vaultStats{
@@ -148,7 +151,7 @@ func (v *Vault) VaultStatsHandler(ctx context.Context, req *mcp.CallToolRequest,
 
 		if info.IsDir() {
 			if path != searchPath {
-				relPath, _ := filepath.Rel(v.path, path)
+				relPath, _ := filepath.Rel(v.GetPath(), path)
 				stats.folders[relPath] = true
 			}
 			return nil

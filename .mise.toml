@@ -8,11 +8,11 @@ CGO_ENABLED = "0"
 
 [tasks.build]
 description = "Build the MCP server binary"
-run = "go build -o bin/obsidian-mcp ./cmd/server"
+run = "go build -o bin/obx ./cmd/obx"
 
 [tasks.dev]
 description = "Build and run with test vault"
-run = "go run ./cmd/server ../vault"
+run = "go run ./cmd/obx ../vault"
 
 [tasks.lint]
 description = "Run golangci-lint"

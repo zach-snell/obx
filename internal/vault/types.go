@@ -2,17 +2,27 @@ package vault
 
 // --- Common ---
 
+// ListVaultsArgs arguments for list-vaults
+type ListVaultsArgs struct{}
+
+// SwitchVaultArgs arguments for switch-vault
+type SwitchVaultArgs struct {
+	Vault string `json:"vault" jsonschema:"The alias or absolute path of the vault to switch to"`
+}
+
 // ListNotesArgs arguments for list-notes
 type ListNotesArgs struct {
 	Directory string `json:"directory,omitempty" jsonschema:"Directory path relative to vault root (optional)"`
 	Limit     int    `json:"limit,omitempty" jsonschema:"Maximum number of notes to return (optional, 0 = no limit)"`
 	Offset    int    `json:"offset,omitempty" jsonschema:"Number of notes to skip for pagination (optional, default 0)"`
+	Mode      string `json:"mode,omitempty" jsonschema:"Response mode: compact (default) or detailed"`
 }
 
 // WriteNoteArgs arguments for write-note
 type WriteNoteArgs struct {
-	Path    string `json:"path" jsonschema:"Path to the note relative to vault root (.md extension required)"`
-	Content string `json:"content" jsonschema:"Content of the note"`
+	Path          string `json:"path" jsonschema:"Path to the note relative to vault root (.md extension required)"`
+	Content       string `json:"content" jsonschema:"Content of the note"`
+	ExpectedMtime string `json:"expected_mtime,omitempty" jsonschema:"Expected file modification time (RFC3339Nano) for optimistic concurrency"`
 }
 
 // ReadNoteArgs arguments for read-note
@@ -22,7 +32,9 @@ type ReadNoteArgs struct {
 
 // DeleteNoteArgs arguments for delete-note
 type DeleteNoteArgs struct {
-	Path string `json:"path" jsonschema:"Path to the note to delete"`
+	Path          string `json:"path" jsonschema:"Path to the note to delete"`
+	DryRun        bool   `json:"dry_run,omitempty" jsonschema:"Preview deletion without modifying files"`
+	ExpectedMtime string `json:"expected_mtime,omitempty" jsonschema:"Expected file modification time (RFC3339Nano) for optimistic concurrency"`
 }
 
 // ReadNotesArgs arguments for read-multiple-notes
@@ -59,19 +71,21 @@ type SearchHeadingsArgs struct {
 
 // EditNoteArgs arguments for edit-note
 type EditNoteArgs struct {
-	Path         string `json:"path" jsonschema:"Path to the note"`
-	OldText      string `json:"old_text" jsonschema:"Text to find and replace"`
-	NewText      string `json:"new_text" jsonschema:"Replacement text"`
-	ReplaceAll   bool   `json:"replace_all,omitempty" jsonschema:"Whether to replace all occurrences (default false)"`
-	ContextLines int    `json:"context_lines,omitempty" jsonschema:"Number of context lines to return (default 0)"`
+	Path          string `json:"path" jsonschema:"Path to the note"`
+	OldText       string `json:"old_text" jsonschema:"Text to find and replace"`
+	NewText       string `json:"new_text" jsonschema:"Replacement text"`
+	ReplaceAll    bool   `json:"replace_all,omitempty" jsonschema:"Whether to replace all occurrences (default false)"`
+	ContextLines  int    `json:"context_lines,omitempty" jsonschema:"Number of context lines to return (default 0)"`
+	ExpectedMtime string `json:"expected_mtime,omitempty" jsonschema:"Expected file modification time (RFC3339Nano) for optimistic concurrency"`
 }
 
 // ReplaceSectionArgs arguments for replace-section
 type ReplaceSectionArgs struct {
-	Path         string `json:"path" jsonschema:"Path to the note"`
-	Heading      string `json:"heading" jsonschema:"Heading of the section to replace"`
-	Content      string `json:"content" jsonschema:"New content for the section"`
-	ContextLines int    `json:"context_lines,omitempty" jsonschema:"Number of context lines to return (default 0)"`
+	Path          string `json:"path" jsonschema:"Path to the note"`
+	Heading       string `json:"heading" jsonschema:"Heading of the section to replace"`
+	Content       string `json:"content" jsonschema:"New content for the section"`
+	ContextLines  int    `json:"context_lines,omitempty" jsonschema:"Number of context lines to return (default 0)"`
+	ExpectedMtime string `json:"expected_mtime,omitempty" jsonschema:"Expected file modification time (RFC3339Nano) for optimistic concurrency"`
 }
 
 // EditEntry represents a single edit in a batch
@@ -82,19 +96,22 @@ type EditEntry struct {
 
 // BatchEditArgs arguments for batch-edit-note
 type BatchEditArgs struct {
-	Path         string      `json:"path" jsonschema:"Path to the note"`
-	Edits        []EditEntry `json:"edits" jsonschema:"List of edits to apply"`
-	ContextLines int         `json:"context_lines,omitempty" jsonschema:"Number of context lines to return (default 0)"`
+	Path          string      `json:"path" jsonschema:"Path to the note"`
+	Edits         []EditEntry `json:"edits" jsonschema:"List of edits to apply"`
+	ContextLines  int         `json:"context_lines,omitempty" jsonschema:"Number of context lines to return (default 0)"`
+	DryRun        bool        `json:"dry_run,omitempty" jsonschema:"Preview edits without modifying files"`
+	ExpectedMtime string      `json:"expected_mtime,omitempty" jsonschema:"Expected file modification time (RFC3339Nano) for optimistic concurrency"`
 }
 
 // AppendNoteArgs arguments for append-note
 type AppendNoteArgs struct {
-	Path         string `json:"path" jsonschema:"Path to the note"`
-	Content      string `json:"content" jsonschema:"Content to append"`
-	Position     string `json:"position,omitempty" jsonschema:"Position to insert: 'end' (default), 'start', 'before', 'after'"`
-	After        string `json:"after,omitempty" jsonschema:"Heading or text to insert after (if position is 'after')"`
-	Before       string `json:"before,omitempty" jsonschema:"Heading or text to insert before (if position is 'before')"`
-	ContextLines int    `json:"context_lines,omitempty" jsonschema:"Number of context lines to return (default 0)"`
+	Path          string `json:"path" jsonschema:"Path to the note"`
+	Content       string `json:"content" jsonschema:"Content to append"`
+	Position      string `json:"position,omitempty" jsonschema:"Position to insert: 'end' (default), 'start', 'before', 'after'"`
+	After         string `json:"after,omitempty" jsonschema:"Heading or text to insert after (if position is 'after')"`
+	Before        string `json:"before,omitempty" jsonschema:"Heading or text to insert before (if position is 'before')"`
+	ContextLines  int    `json:"context_lines,omitempty" jsonschema:"Number of context lines to return (default 0)"`
+	ExpectedMtime string `json:"expected_mtime,omitempty" jsonschema:"Expected file modification time (RFC3339Nano) for optimistic concurrency"`
 }
 
 // --- Search ---
@@ -103,6 +120,7 @@ type AppendNoteArgs struct {
 type SearchArgs struct {
 	Query     string `json:"query" jsonschema:"Search query"`
 	Directory string `json:"directory,omitempty" jsonschema:"Directory to limit search to"`
+	Mode      string `json:"mode,omitempty" jsonschema:"Response mode: compact (default) or detailed"`
 }
 
 // SearchAdvancedArgs arguments for search-advanced
@@ -112,6 +130,7 @@ type SearchAdvancedArgs struct {
 	Operator  string `json:"operator,omitempty" jsonschema:"Logical operator: 'and' (default), 'or'"`
 	Directory string `json:"directory,omitempty" jsonschema:"Directory to limit search to"`
 	Limit     int    `json:"limit,omitempty" jsonschema:"Maximum results to return (default 50)"`
+	Mode      string `json:"mode,omitempty" jsonschema:"Response mode: compact (default) or detailed"`
 }
 
 // SearchDateArgs arguments for search-date
@@ -129,6 +148,7 @@ type SearchRegexArgs struct {
 	Directory       string `json:"directory,omitempty" jsonschema:"Directory to limit search to"`
 	Limit           int    `json:"limit,omitempty" jsonschema:"Maximum results to return (default 50)"`
 	CaseInsensitive bool   `json:"case_insensitive,omitempty" jsonschema:"Whether to ignore case (default true)"`
+	Mode            string `json:"mode,omitempty" jsonschema:"Response mode: compact (default) or detailed"`
 }
 
 // --- Tasks ---
@@ -137,19 +157,23 @@ type SearchRegexArgs struct {
 type ListTasksArgs struct {
 	Status    string `json:"status,omitempty" jsonschema:"Filter by status: 'all' (default), 'open', 'completed'"`
 	Directory string `json:"directory,omitempty" jsonschema:"Directory to limit search to"`
+	Limit     int    `json:"limit,omitempty" jsonschema:"Maximum tasks to return (default: all in detailed mode, 100 in compact mode)"`
+	Mode      string `json:"mode,omitempty" jsonschema:"Response mode: compact (default) or detailed"`
 }
 
 // ToggleTaskArgs arguments for toggle-task
 type ToggleTaskArgs struct {
-	Path string `json:"path" jsonschema:"Path to the note"`
-	Line int    `json:"line,omitempty" jsonschema:"Line number of the task (optional if text is provided)"`
-	Text string `json:"text,omitempty" jsonschema:"Text to match the task (partial match, alternative to line number)"`
+	Path          string `json:"path" jsonschema:"Path to the note"`
+	Line          int    `json:"line,omitempty" jsonschema:"Line number of the task (optional if text is provided)"`
+	Text          string `json:"text,omitempty" jsonschema:"Text to match the task (partial match, alternative to line number)"`
+	ExpectedMtime string `json:"expected_mtime,omitempty" jsonschema:"Expected file modification time (RFC3339Nano) for optimistic concurrency"`
 }
 
 // CompleteTasksArgs arguments for complete-tasks
 type CompleteTasksArgs struct {
-	Path  string `json:"path" jsonschema:"Path to the note"`
-	Texts string `json:"texts" jsonschema:"Comma-separated list or JSON array of task text snippets to mark complete"`
+	Path          string `json:"path" jsonschema:"Path to the note"`
+	Texts         string `json:"texts" jsonschema:"Comma-separated list or JSON array of task text snippets to mark complete"`
+	ExpectedMtime string `json:"expected_mtime,omitempty" jsonschema:"Expected file modification time (RFC3339Nano) for optimistic concurrency"`
 }
 
 // --- Tags ---
@@ -167,6 +191,7 @@ type BulkTagArgs struct {
 	Paths  string `json:"paths" jsonschema:"Comma-separated list or JSON array of paths"`
 	Tag    string `json:"tag" jsonschema:"Tag to add or remove"`
 	Action string `json:"action,omitempty" jsonschema:"Action: 'add' (default), 'remove'"`
+	DryRun bool   `json:"dry_run,omitempty" jsonschema:"Preview changes without modifying files"`
 }
 
 // BulkMoveArgs arguments for bulk-move
@@ -174,13 +199,15 @@ type BulkMoveArgs struct {
 	Paths       string `json:"paths" jsonschema:"Comma-separated list or JSON array of paths"`
 	Destination string `json:"destination" jsonschema:"Destination folder"`
 	UpdateLinks bool   `json:"update_links,omitempty" jsonschema:"Whether to update links (default true)"`
+	DryRun      bool   `json:"dry_run,omitempty" jsonschema:"Preview moves without modifying files"`
 }
 
 // BulkSetFrontmatterArgs arguments for bulk-set-frontmatter
 type BulkSetFrontmatterArgs struct {
-	Paths string `json:"paths" jsonschema:"Comma-separated list or JSON array of paths"`
-	Key   string `json:"key" jsonschema:"Frontmatter key"`
-	Value string `json:"value" jsonschema:"Value to set"`
+	Paths  string `json:"paths" jsonschema:"Comma-separated list or JSON array of paths"`
+	Key    string `json:"key" jsonschema:"Frontmatter key"`
+	Value  string `json:"value" jsonschema:"Value to set"`
+	DryRun bool   `json:"dry_run,omitempty" jsonschema:"Preview changes without modifying files"`
 }
 
 // --- Folders ---
@@ -201,12 +228,14 @@ type MoveArgs struct {
 	Source      string `json:"source" jsonschema:"Source path"`
 	Destination string `json:"destination" jsonschema:"Destination path"`
 	UpdateLinks bool   `json:"update_links,omitempty" jsonschema:"Whether to update links to this file (default true)"`
+	DryRun      bool   `json:"dry_run,omitempty" jsonschema:"Preview move without modifying files"`
 }
 
 // DeleteDirArgs arguments for delete-directory
 type DeleteDirArgs struct {
-	Path  string `json:"path" jsonschema:"Path of the directory to delete"`
-	Force bool   `json:"force,omitempty" jsonschema:"Force delete even if not empty (default false)"`
+	Path   string `json:"path" jsonschema:"Path of the directory to delete"`
+	Force  bool   `json:"force,omitempty" jsonschema:"Force delete even if not empty (default false)"`
+	DryRun bool   `json:"dry_run,omitempty" jsonschema:"Preview deletion without modifying files"`
 }
 
 // --- Periodic Notes ---
@@ -292,27 +321,31 @@ type GetFrontmatterArgs struct {
 
 // SetFrontmatterArgs arguments for set-frontmatter
 type SetFrontmatterArgs struct {
-	Path  string `json:"path" jsonschema:"Path to the note"`
-	Key   string `json:"key" jsonschema:"Frontmatter key"`
-	Value string `json:"value" jsonschema:"Value to set"`
+	Path          string `json:"path" jsonschema:"Path to the note"`
+	Key           string `json:"key" jsonschema:"Frontmatter key"`
+	Value         string `json:"value" jsonschema:"Value to set"`
+	ExpectedMtime string `json:"expected_mtime,omitempty" jsonschema:"Expected file modification time (RFC3339Nano) for optimistic concurrency"`
 }
 
 // DeleteFrontmatterArgs arguments for delete-frontmatter
 type DeleteFrontmatterArgs struct {
-	Path string `json:"path" jsonschema:"Path to the note"`
-	Key  string `json:"key" jsonschema:"Frontmatter key to remove"`
+	Path          string `json:"path" jsonschema:"Path to the note"`
+	Key           string `json:"key" jsonschema:"Frontmatter key to remove"`
+	ExpectedMtime string `json:"expected_mtime,omitempty" jsonschema:"Expected file modification time (RFC3339Nano) for optimistic concurrency"`
 }
 
 // AddAliasArgs arguments for add-alias
 type AddAliasArgs struct {
-	Path  string `json:"path" jsonschema:"Path to the note"`
-	Alias string `json:"alias" jsonschema:"Alias to add"`
+	Path          string `json:"path" jsonschema:"Path to the note"`
+	Alias         string `json:"alias" jsonschema:"Alias to add"`
+	ExpectedMtime string `json:"expected_mtime,omitempty" jsonschema:"Expected file modification time (RFC3339Nano) for optimistic concurrency"`
 }
 
 // AddTagArgs arguments for add-tag
 type AddTagArgs struct {
-	Path string `json:"path" jsonschema:"Path to the note"`
-	Tag  string `json:"tag" jsonschema:"Tag to add"`
+	Path          string `json:"path" jsonschema:"Path to the note"`
+	Tag           string `json:"tag" jsonschema:"Tag to add"`
+	ExpectedMtime string `json:"expected_mtime,omitempty" jsonschema:"Expected file modification time (RFC3339Nano) for optimistic concurrency"`
 }
 
 // RemoveTagArgs arguments for remove-tag
@@ -348,9 +381,10 @@ type GetInlineFieldsArgs struct {
 
 // SetInlineFieldArgs arguments for set-inline-field
 type SetInlineFieldArgs struct {
-	Path  string `json:"path" jsonschema:"Path to the note"`
-	Key   string `json:"key" jsonschema:"Field key"`
-	Value string `json:"value" jsonschema:"Field value"`
+	Path          string `json:"path" jsonschema:"Path to the note"`
+	Key           string `json:"key" jsonschema:"Field key"`
+	Value         string `json:"value" jsonschema:"Field value"`
+	ExpectedMtime string `json:"expected_mtime,omitempty" jsonschema:"Expected file modification time (RFC3339Nano) for optimistic concurrency"`
 }
 
 // SearchInlineFieldsArgs arguments for search-inline-fields
@@ -419,6 +453,7 @@ type ExtractNoteArgs struct {
 	Level        int    `json:"level,omitempty" jsonschema:"Heading level to extract (default: 2)"`
 	KeepOriginal bool   `json:"keep_original,omitempty" jsonschema:"Keep extracted content in original note"`
 	OutputDir    string `json:"output_dir,omitempty" jsonschema:"Directory for new notes"`
+	DryRun       bool   `json:"dry_run,omitempty" jsonschema:"Preview extraction without modifying files"`
 }
 
 // MergeNotesArgs arguments for merge-notes
@@ -428,6 +463,7 @@ type MergeNotesArgs struct {
 	Separator       string `json:"separator,omitempty" jsonschema:"Separator between notes"`
 	DeleteOriginals bool   `json:"delete_originals,omitempty" jsonschema:"Delete original notes after merge"`
 	AddHeadings     bool   `json:"add_headings,omitempty" jsonschema:"Add note names as headings"`
+	DryRun          bool   `json:"dry_run,omitempty" jsonschema:"Preview merge without modifying files"`
 }
 
 // ExtractSectionArgs arguments for extract-section
@@ -437,6 +473,7 @@ type ExtractSectionArgs struct {
 	Output             string `json:"output" jsonschema:"Output note path"`
 	RemoveFromOriginal bool   `json:"remove_from_original,omitempty" jsonschema:"Remove from source note (default true)"`
 	AddLink            bool   `json:"add_link,omitempty" jsonschema:"Add link to new note in source (default true)"`
+	DryRun             bool   `json:"dry_run,omitempty" jsonschema:"Preview extraction without modifying files"`
 }
 
 // DuplicateNoteArgs arguments for duplicate-note

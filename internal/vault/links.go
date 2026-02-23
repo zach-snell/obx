@@ -54,7 +54,7 @@ func (v *Vault) BacklinksHandler(ctx context.Context, req *mcp.CallToolRequest, 
 
 	var backlinks []backlink
 
-	err := filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(v.GetPath(), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -62,7 +62,7 @@ func (v *Vault) BacklinksHandler(ctx context.Context, req *mcp.CallToolRequest, 
 			return nil
 		}
 
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 		// Skip the target note itself
 		if relPath == target || strings.TrimSuffix(relPath, ".md") == targetName {
 			return nil
@@ -152,7 +152,7 @@ func (v *Vault) updateLinksInVault(oldName, newName string) error {
 		},
 	}
 
-	return filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(v.GetPath(), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -191,8 +191,8 @@ func (v *Vault) RenameNoteHandler(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, nil, fmt.Errorf("paths must end with .md")
 	}
 
-	oldFullPath := filepath.Join(v.path, oldPath)
-	newFullPath := filepath.Join(v.path, newPath)
+	oldFullPath := filepath.Join(v.GetPath(), oldPath)
+	newFullPath := filepath.Join(v.GetPath(), newPath)
 
 	if !v.isPathSafe(oldFullPath) || !v.isPathSafe(newFullPath) {
 		return nil, nil, fmt.Errorf("paths must be within vault")
@@ -239,7 +239,7 @@ func (v *Vault) RenameNoteHandler(ctx context.Context, req *mcp.CallToolRequest,
 
 	// Update all notes that link to the old path
 	updatedFiles := 0
-	err := filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(v.GetPath(), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}

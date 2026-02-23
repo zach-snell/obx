@@ -60,9 +60,12 @@ func (v *Vault) ListDailyNotesHandler(ctx context.Context, req *mcp.CallToolRequ
 		limit = 30
 	}
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if folder != "" {
-		searchPath = filepath.Join(v.path, folder)
+		searchPath = filepath.Join(v.GetPath(), folder)
+	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
 	}
 
 	type noteInfo struct {
@@ -77,7 +80,7 @@ func (v *Vault) ListDailyNotesHandler(ctx context.Context, req *mcp.CallToolRequ
 			return nil
 		}
 		if !info.IsDir() && strings.HasSuffix(path, ".md") {
-			relPath, _ := filepath.Rel(v.path, path)
+			relPath, _ := filepath.Rel(v.GetPath(), path)
 			notes = append(notes, noteInfo{path: relPath, modTime: info.ModTime()})
 		}
 		return nil

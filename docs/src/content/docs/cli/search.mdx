@@ -1,0 +1,57 @@
+---
+title: obx search
+description: Search your Obsidian vault from the command line.
+---
+
+The `obx search` command allows you to perform full-text searches across your Obsidian vault. It's optimized for speed and provides output formats suitable for both human reading and scripting.
+
+## Usage
+
+```bash
+obx search <query> [flags] [vault_path]
+```
+
+Or, if an active vault is configured:
+
+```bash
+obx search "machine learning"
+```
+
+## Options
+
+| Flag | Shorthand | Description | Default |
+|------|-----------|-------------|---------|
+| `--limit` | `-l` | Maximum number of results to return | `10` |
+| `--dir` | `-d` | Restrict search to a specific directory inside the vault | |
+
+## Examples
+
+### Basic Search
+
+```bash
+obx search "meeting notes"
+```
+
+Output:
+```text
+Found 3 results:
+- meetings/2023-10-25.md
+- meetings/2023-10-26.md
+- projects/website-redesign.md
+```
+
+### Searching within a Directory
+
+To limit your search to a specific folder (e.g., `projects`):
+
+```bash
+obx search "TODO" -d projects
+```
+
+### Limiting Results
+
+To get only the top 5 matches:
+
+```bash
+obx search "API key" -l 5
+```

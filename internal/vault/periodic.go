@@ -123,6 +123,11 @@ func (v *Vault) QuarterlyNoteHandler(ctx context.Context, req *mcp.CallToolReque
 	filename := fmt.Sprintf("%d-Q%d.md", year, quarter)
 
 	return v.getOrCreatePeriodicNote(folder, filename, createIfMissing, func() string {
+		startMonth := time.Month((quarter-1)*3 + 1)
+		month1 := time.Date(year, startMonth, 1, 0, 0, 0, 0, targetDate.Location()).Format("2006-01")
+		month2 := time.Date(year, startMonth+1, 1, 0, 0, 0, 0, targetDate.Location()).Format("2006-01")
+		month3 := time.Date(year, startMonth+2, 1, 0, 0, 0, 0, targetDate.Location()).Format("2006-01")
+
 		return fmt.Sprintf(`# Q%d %d
 
 ## Goals
@@ -131,15 +136,15 @@ func (v *Vault) QuarterlyNoteHandler(ctx context.Context, req *mcp.CallToolReque
 
 ## Monthly Reviews
 
-- [[%d-01]]
-- [[%d-02]]
-- [[%d-03]]
+- [[%s]]
+- [[%s]]
+- [[%s]]
 
 ## Notes
 
 ## Quarter Review
 
-`, quarter, year, year, year, year)
+`, quarter, year, month1, month2, month3)
 	})
 }
 
@@ -215,7 +220,7 @@ func (v *Vault) ListPeriodicNotesHandler(ctx context.Context, req *mcp.CallToolR
 		folder = customFolder
 	}
 
-	searchPath := filepath.Join(v.path, folder)
+	searchPath := filepath.Join(v.GetPath(), folder)
 
 	if !v.isPathSafe(searchPath) {
 		return nil, nil, fmt.Errorf("search path must be within vault")
@@ -242,7 +247,7 @@ func (v *Vault) ListPeriodicNotesHandler(ctx context.Context, req *mcp.CallToolR
 			return nil
 		}
 		if !info.IsDir() && strings.HasSuffix(path, ".md") {
-			relPath, _ := filepath.Rel(v.path, path)
+			relPath, _ := filepath.Rel(v.GetPath(), path)
 			notes = append(notes, noteInfo{
 				name:    strings.TrimSuffix(filepath.Base(path), ".md"),
 				path:    relPath,
@@ -296,7 +301,7 @@ func (v *Vault) getOrCreatePeriodicNote(folder, filename string, create bool, te
 		notePath = filename
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")

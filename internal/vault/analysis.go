@@ -32,9 +32,12 @@ func (v *Vault) FindStubsHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		limit = 50
 	}
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
+	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
 	}
 
 	var stubs []stubInfo
@@ -53,7 +56,7 @@ func (v *Vault) FindStubsHandler(ctx context.Context, req *mcp.CallToolRequest, 
 		wordCount := len(strings.Fields(body))
 
 		if wordCount <= maxWords {
-			relPath, _ := filepath.Rel(v.path, path)
+			relPath, _ := filepath.Rel(v.GetPath(), path)
 			stubs = append(stubs, stubInfo{
 				path:      relPath,
 				wordCount: wordCount,
@@ -121,9 +124,12 @@ func (v *Vault) FindOutdatedHandler(ctx context.Context, req *mcp.CallToolReques
 		limit = 50
 	}
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
+	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
 	}
 
 	cutoff := time.Now().AddDate(0, 0, -days)
@@ -135,7 +141,7 @@ func (v *Vault) FindOutdatedHandler(ctx context.Context, req *mcp.CallToolReques
 		}
 
 		if info.ModTime().Before(cutoff) {
-			relPath, _ := filepath.Rel(v.path, path)
+			relPath, _ := filepath.Rel(v.GetPath(), path)
 			daysSince := int(time.Since(info.ModTime()).Hours() / 24)
 			outdated = append(outdated, outdatedInfo{
 				path:      relPath,
@@ -200,7 +206,7 @@ func (v *Vault) UnlinkedMentionsHandler(ctx context.Context, req *mcp.CallToolRe
 		targetPath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, targetPath)
+	fullPath := filepath.Join(v.GetPath(), targetPath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -211,7 +217,7 @@ func (v *Vault) UnlinkedMentionsHandler(ctx context.Context, req *mcp.CallToolRe
 
 	var mentions []unlinkedMention
 
-	err := filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(v.GetPath(), func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
 			return nil
 		}
@@ -226,7 +232,7 @@ func (v *Vault) UnlinkedMentionsHandler(ctx context.Context, req *mcp.CallToolRe
 			return nil
 		}
 
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 		lines := strings.Split(string(content), "\n")
 
 		for i, line := range lines {
@@ -316,7 +322,7 @@ func (v *Vault) SuggestLinksHandler(ctx context.Context, req *mcp.CallToolReques
 		notePath += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, notePath)
+	fullPath := filepath.Join(v.GetPath(), notePath)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -340,7 +346,7 @@ func (v *Vault) SuggestLinksHandler(ctx context.Context, req *mcp.CallToolReques
 	suggestions := make(map[string]*linkSuggestion)
 
 	// Scan all notes and find potential links
-	err = filepath.Walk(v.path, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(v.GetPath(), func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
 			return nil
 		}
@@ -349,7 +355,7 @@ func (v *Vault) SuggestLinksHandler(ctx context.Context, req *mcp.CallToolReques
 			return nil
 		}
 
-		relPath, _ := filepath.Rel(v.path, path)
+		relPath, _ := filepath.Rel(v.GetPath(), path)
 		otherName := strings.TrimSuffix(filepath.Base(path), ".md")
 		otherNameLower := strings.ToLower(otherName)
 

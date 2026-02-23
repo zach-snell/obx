@@ -16,6 +16,7 @@ func (v *Vault) ExtractNoteHandler(ctx context.Context, req *mcp.CallToolRequest
 	level := args.Level
 	keepOriginal := args.KeepOriginal
 	outputDir := args.OutputDir
+	dryRun := args.DryRun
 
 	if level <= 0 {
 		level = 2
@@ -25,7 +26,7 @@ func (v *Vault) ExtractNoteHandler(ctx context.Context, req *mcp.CallToolRequest
 		path += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, path)
+	fullPath := filepath.Join(v.GetPath(), path)
 
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
@@ -51,49 +52,45 @@ func (v *Vault) ExtractNoteHandler(ctx context.Context, req *mcp.CallToolRequest
 	if outputDir == "" {
 		outputDir = filepath.Dir(path)
 	}
-	outputDirFull := filepath.Join(v.path, outputDir)
+	outputDirFull := filepath.Join(v.GetPath(), outputDir)
 	if !v.isPathSafe(outputDirFull) {
 		return nil, nil, fmt.Errorf("output directory must be within vault")
 	}
 
-	if err := os.MkdirAll(outputDirFull, 0o755); err != nil {
-		return nil, nil, fmt.Errorf("failed to create output directory: %v", err)
+	if !dryRun {
+		if err := os.MkdirAll(outputDirFull, 0o755); err != nil {
+			return nil, nil, fmt.Errorf("failed to create output directory: %v", err)
+		}
 	}
 
-	var created []string
-	for _, section := range sections {
-		if section.title == "" {
-			continue // Skip preamble without title
-		}
-
-		// Create sanitized filename from title
-		filename := sanitizeFilename(section.title) + ".md"
-		newPath := filepath.Join(outputDirFull, filename)
-
-		// Add frontmatter if extracting
-		newContent := fmt.Sprintf("# %s\n\n%s", section.title, strings.TrimSpace(section.content))
-
-		if err := os.WriteFile(newPath, []byte(newContent), 0o600); err != nil {
-			return nil, nil, fmt.Errorf("failed to write %s: %v", filename, err)
-		}
-
-		relPath, _ := filepath.Rel(v.path, newPath)
-		created = append(created, relPath)
+	created, err := v.writeSplitSections(sections, outputDirFull, dryRun)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if !keepOriginal {
-		if err := os.Remove(fullPath); err != nil {
-			return nil, nil, fmt.Errorf("failed to remove original: %v", err)
+		if !dryRun {
+			if err := os.Remove(fullPath); err != nil {
+				return nil, nil, fmt.Errorf("failed to remove original: %v", err)
+			}
 		}
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Split into %d notes:\n\n", len(created)))
+	if dryRun {
+		sb.WriteString(fmt.Sprintf("Dry run: would split into %d notes:\n\n", len(created)))
+	} else {
+		sb.WriteString(fmt.Sprintf("Split into %d notes:\n\n", len(created)))
+	}
 	for _, c := range created {
 		sb.WriteString(fmt.Sprintf("- %s\n", c))
 	}
 	if !keepOriginal {
-		sb.WriteString(fmt.Sprintf("\nOriginal note removed: %s", path))
+		if dryRun {
+			sb.WriteString(fmt.Sprintf("\nOriginal note would be removed: %s", path))
+		} else {
+			sb.WriteString(fmt.Sprintf("\nOriginal note removed: %s", path))
+		}
 	}
 
 	return &mcp.CallToolResult{
@@ -101,6 +98,27 @@ func (v *Vault) ExtractNoteHandler(ctx context.Context, req *mcp.CallToolRequest
 			&mcp.TextContent{Text: sb.String()},
 		},
 	}, nil, nil
+}
+
+// writeSplitSections writes each titled section to its own file and returns the created paths.
+func (v *Vault) writeSplitSections(sections []section, outputDir string, dryRun bool) ([]string, error) {
+	var created []string
+	for _, sec := range sections {
+		if sec.title == "" {
+			continue
+		}
+		filename := sanitizeFilename(sec.title) + ".md"
+		newPath := filepath.Join(outputDir, filename)
+		newContent := fmt.Sprintf("# %s\n\n%s", sec.title, strings.TrimSpace(sec.content))
+		if !dryRun {
+			if err := os.WriteFile(newPath, []byte(newContent), 0o600); err != nil {
+				return nil, fmt.Errorf("failed to write %s: %v", filename, err)
+			}
+		}
+		relPath, _ := filepath.Rel(v.GetPath(), newPath)
+		created = append(created, relPath)
+	}
+	return created, nil
 }
 
 // section represents a heading section
@@ -171,6 +189,7 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req *mcp.CallToolRequest,
 	separator := args.Separator
 	deleteOriginals := args.DeleteOriginals
 	addHeadings := args.AddHeadings
+	dryRun := args.DryRun
 
 	if separator == "" {
 		separator = "\n\n---\n\n"
@@ -182,36 +201,9 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req *mcp.CallToolRequest,
 		return nil, nil, fmt.Errorf("at least 2 paths are required to merge")
 	}
 
-	var contents []string
-	var validPaths []string
-
-	for _, p := range paths {
-		if !strings.HasSuffix(p, ".md") {
-			p += ".md"
-		}
-
-		fullPath := filepath.Join(v.path, p)
-		if !v.isPathSafe(fullPath) {
-			return nil, nil, fmt.Errorf("path must be within vault: %s", p)
-		}
-
-		content, err := os.ReadFile(fullPath)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to read %s: %v", p, err)
-		}
-
-		contentStr := string(content)
-
-		if addHeadings {
-			// Add the filename as a heading if it doesn't start with one
-			name := strings.TrimSuffix(filepath.Base(p), ".md")
-			if !strings.HasPrefix(strings.TrimSpace(contentStr), "#") {
-				contentStr = fmt.Sprintf("## %s\n\n%s", name, contentStr)
-			}
-		}
-
-		contents = append(contents, strings.TrimSpace(contentStr))
-		validPaths = append(validPaths, p)
+	contents, validPaths, err := v.readMergeContents(paths, addHeadings)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// Combine contents
@@ -221,23 +213,27 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req *mcp.CallToolRequest,
 	if !strings.HasSuffix(output, ".md") {
 		output += ".md"
 	}
-	outputFull := filepath.Join(v.path, output)
+	outputFull := filepath.Join(v.GetPath(), output)
 	if !v.isPathSafe(outputFull) {
 		return nil, nil, fmt.Errorf("output path must be within vault")
 	}
 
-	if err := os.MkdirAll(filepath.Dir(outputFull), 0o755); err != nil {
-		return nil, nil, fmt.Errorf("failed to create directory: %v", err)
+	if !dryRun {
+		if err := os.MkdirAll(filepath.Dir(outputFull), 0o755); err != nil {
+			return nil, nil, fmt.Errorf("failed to create directory: %v", err)
+		}
 	}
 
-	if err := os.WriteFile(outputFull, []byte(merged), 0o600); err != nil {
-		return nil, nil, fmt.Errorf("failed to write merged note: %v", err)
+	if !dryRun {
+		if err := os.WriteFile(outputFull, []byte(merged), 0o600); err != nil {
+			return nil, nil, fmt.Errorf("failed to write merged note: %v", err)
+		}
 	}
 
 	// Delete originals if requested
-	if deleteOriginals {
+	if deleteOriginals && !dryRun {
 		for _, p := range validPaths {
-			fullPath := filepath.Join(v.path, p)
+			fullPath := filepath.Join(v.GetPath(), p)
 			if err := os.Remove(fullPath); err != nil {
 				// Log but don't fail
 				continue
@@ -246,11 +242,19 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req *mcp.CallToolRequest,
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Merged %d notes into %s\n\n", len(validPaths), output))
+	if dryRun {
+		sb.WriteString(fmt.Sprintf("Dry run: would merge %d notes into %s\n\n", len(validPaths), output))
+	} else {
+		sb.WriteString(fmt.Sprintf("Merged %d notes into %s\n\n", len(validPaths), output))
+	}
 	sb.WriteString("Source notes:\n")
 	for _, p := range validPaths {
 		if deleteOriginals {
-			sb.WriteString(fmt.Sprintf("- %s (deleted)\n", p))
+			if dryRun {
+				sb.WriteString(fmt.Sprintf("- %s (would be deleted)\n", p))
+			} else {
+				sb.WriteString(fmt.Sprintf("- %s (deleted)\n", p))
+			}
 		} else {
 			sb.WriteString(fmt.Sprintf("- %s\n", p))
 		}
@@ -263,6 +267,33 @@ func (v *Vault) MergeNotesHandler(ctx context.Context, req *mcp.CallToolRequest,
 	}, nil, nil
 }
 
+// readMergeContents reads and prepares note contents for merging.
+func (v *Vault) readMergeContents(paths []string, addHeadings bool) (contents, validPaths []string, err error) {
+	for _, p := range paths {
+		if !strings.HasSuffix(p, ".md") {
+			p += ".md"
+		}
+		fullPath := filepath.Join(v.GetPath(), p)
+		if !v.isPathSafe(fullPath) {
+			return nil, nil, fmt.Errorf("path must be within vault: %s", p)
+		}
+		data, readErr := os.ReadFile(fullPath)
+		if readErr != nil {
+			return nil, nil, fmt.Errorf("failed to read %s: %v", p, readErr)
+		}
+		contentStr := string(data)
+		if addHeadings {
+			name := strings.TrimSuffix(filepath.Base(p), ".md")
+			if !strings.HasPrefix(strings.TrimSpace(contentStr), "#") {
+				contentStr = fmt.Sprintf("## %s\n\n%s", name, contentStr)
+			}
+		}
+		contents = append(contents, strings.TrimSpace(contentStr))
+		validPaths = append(validPaths, p)
+	}
+	return contents, validPaths, nil
+}
+
 // ExtractSectionHandler extracts a section to a new note
 func (v *Vault) ExtractSectionHandler(ctx context.Context, req *mcp.CallToolRequest, args ExtractSectionArgs) (*mcp.CallToolResult, any, error) {
 	path := args.Path
@@ -270,12 +301,13 @@ func (v *Vault) ExtractSectionHandler(ctx context.Context, req *mcp.CallToolRequ
 	output := args.Output
 	removeFromOriginal := args.RemoveFromOriginal
 	addLink := args.AddLink
+	dryRun := args.DryRun
 
 	if !strings.HasSuffix(path, ".md") {
 		path += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, path)
+	fullPath := filepath.Join(v.GetPath(), path)
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
 	}
@@ -299,20 +331,24 @@ func (v *Vault) ExtractSectionHandler(ctx context.Context, req *mcp.CallToolRequ
 		output += ".md"
 	}
 
-	outputFull := filepath.Join(v.path, output)
+	outputFull := filepath.Join(v.GetPath(), output)
 	if !v.isPathSafe(outputFull) {
 		return nil, nil, fmt.Errorf("output path must be within vault")
 	}
 
-	if err := os.MkdirAll(filepath.Dir(outputFull), 0o755); err != nil {
-		return nil, nil, fmt.Errorf("failed to create directory: %v", err)
+	if !dryRun {
+		if err := os.MkdirAll(filepath.Dir(outputFull), 0o755); err != nil {
+			return nil, nil, fmt.Errorf("failed to create directory: %v", err)
+		}
 	}
 
 	// Create new note with extracted content
 	newContent := fmt.Sprintf("# %s\n\n%s", heading, strings.TrimSpace(sectionContent))
 
-	if err := os.WriteFile(outputFull, []byte(newContent), 0o600); err != nil {
-		return nil, nil, fmt.Errorf("failed to write new note: %v", err)
+	if !dryRun {
+		if err := os.WriteFile(outputFull, []byte(newContent), 0o600); err != nil {
+			return nil, nil, fmt.Errorf("failed to write new note: %v", err)
+		}
 	}
 
 	// Modify original if requested
@@ -327,14 +363,20 @@ func (v *Vault) ExtractSectionHandler(ctx context.Context, req *mcp.CallToolRequ
 			newOriginal += linkText
 		}
 
-		if err := os.WriteFile(fullPath, []byte(newOriginal), 0o600); err != nil {
-			return nil, nil, fmt.Errorf("failed to update original: %v", err)
+		if !dryRun {
+			if err := os.WriteFile(fullPath, []byte(newOriginal), 0o600); err != nil {
+				return nil, nil, fmt.Errorf("failed to update original: %v", err)
+			}
 		}
 	}
 
+	resultMsg := fmt.Sprintf("Extracted section '%s' to %s", heading, output)
+	if dryRun {
+		resultMsg = fmt.Sprintf("Dry run: would extract section '%s' to %s", heading, output)
+	}
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
-			&mcp.TextContent{Text: fmt.Sprintf("Extracted section '%s' to %s", heading, output)},
+			&mcp.TextContent{Text: resultMsg},
 		},
 	}, nil, nil
 }
@@ -388,7 +430,7 @@ func (v *Vault) DuplicateNoteHandler(ctx context.Context, req *mcp.CallToolReque
 		path += ".md"
 	}
 
-	fullPath := filepath.Join(v.path, path)
+	fullPath := filepath.Join(v.GetPath(), path)
 
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")
@@ -409,7 +451,7 @@ func (v *Vault) DuplicateNoteHandler(ctx context.Context, req *mcp.CallToolReque
 		output += ".md"
 	}
 
-	outputFull := filepath.Join(v.path, output)
+	outputFull := filepath.Join(v.GetPath(), output)
 	if !v.isPathSafe(outputFull) {
 		return nil, nil, fmt.Errorf("output path must be within vault")
 	}

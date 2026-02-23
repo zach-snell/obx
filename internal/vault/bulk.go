@@ -21,6 +21,7 @@ func (v *Vault) BulkTagHandler(ctx context.Context, req *mcp.CallToolRequest, ar
 	pathsStr := args.Paths
 	tag := args.Tag
 	action := args.Action // add, remove
+	dryRun := args.DryRun
 
 	if action == "" {
 		action = "add"
@@ -42,7 +43,11 @@ func (v *Vault) BulkTagHandler(ctx context.Context, req *mcp.CallToolRequest, ar
 			p += ".md"
 		}
 
-		fullPath := filepath.Join(v.path, p)
+		fullPath := filepath.Join(v.GetPath(), p)
+		if !v.isPathSafe(fullPath) {
+			errors = append(errors, fmt.Sprintf("%s: path must be within vault", p))
+			continue
+		}
 		content, err := os.ReadFile(fullPath)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("%s: read failed", p))
@@ -63,19 +68,33 @@ func (v *Vault) BulkTagHandler(ctx context.Context, req *mcp.CallToolRequest, ar
 			continue
 		}
 
-		if err := os.WriteFile(fullPath, []byte(contentStr), 0o600); err != nil {
-			errors = append(errors, fmt.Sprintf("%s: write failed", p))
-			continue
+		if !dryRun {
+			if err := os.WriteFile(fullPath, []byte(contentStr), 0o600); err != nil {
+				errors = append(errors, fmt.Sprintf("%s: write failed", p))
+				continue
+			}
 		}
 
-		results = append(results, fmt.Sprintf("%s: %sed #%s", p, action, tag))
+		if dryRun {
+			results = append(results, fmt.Sprintf("%s: would be %sed #%s", p, action, tag))
+		} else {
+			results = append(results, fmt.Sprintf("%s: %sed #%s", p, action, tag))
+		}
 	}
 
 	var sb strings.Builder
 	if action == "add" {
-		sb.WriteString(fmt.Sprintf("# Bulk Add Tag: #%s\n\n", tag))
+		if dryRun {
+			sb.WriteString(fmt.Sprintf("# Dry Run: Bulk Add Tag: #%s\n\n", tag))
+		} else {
+			sb.WriteString(fmt.Sprintf("# Bulk Add Tag: #%s\n\n", tag))
+		}
 	} else {
-		sb.WriteString(fmt.Sprintf("# Bulk Remove Tag: #%s\n\n", tag))
+		if dryRun {
+			sb.WriteString(fmt.Sprintf("# Dry Run: Bulk Remove Tag: #%s\n\n", tag))
+		} else {
+			sb.WriteString(fmt.Sprintf("# Bulk Remove Tag: #%s\n\n", tag))
+		}
 	}
 
 	if len(results) > 0 {
@@ -218,6 +237,7 @@ func (v *Vault) BulkMoveHandler(ctx context.Context, req *mcp.CallToolRequest, a
 	pathsStr := args.Paths
 	destination := args.Destination
 	updateLinks := args.UpdateLinks
+	dryRun := args.DryRun
 
 	paths := parsePaths(pathsStr)
 	if len(paths) == 0 {
@@ -225,9 +245,14 @@ func (v *Vault) BulkMoveHandler(ctx context.Context, req *mcp.CallToolRequest, a
 	}
 
 	// Ensure destination exists
-	destFull := filepath.Join(v.path, destination)
-	if err := os.MkdirAll(destFull, 0o755); err != nil {
-		return nil, nil, fmt.Errorf("failed to create destination: %v", err)
+	destFull := filepath.Join(v.GetPath(), destination)
+	if !v.isPathSafe(destFull) {
+		return nil, nil, fmt.Errorf("destination must be within vault")
+	}
+	if !dryRun {
+		if err := os.MkdirAll(destFull, 0o755); err != nil {
+			return nil, nil, fmt.Errorf("failed to create destination: %v", err)
+		}
 	}
 
 	var results []string
@@ -238,10 +263,18 @@ func (v *Vault) BulkMoveHandler(ctx context.Context, req *mcp.CallToolRequest, a
 			p += ".md"
 		}
 
-		oldPath := filepath.Join(v.path, p)
+		oldPath := filepath.Join(v.GetPath(), p)
+		if !v.isPathSafe(oldPath) {
+			errors = append(errors, fmt.Sprintf("%s: path must be within vault", p))
+			continue
+		}
 		filename := filepath.Base(p)
 		newPath := filepath.Join(destFull, filename)
 		newRelPath := filepath.Join(destination, filename)
+		if !v.isPathSafe(newPath) {
+			errors = append(errors, fmt.Sprintf("%s: destination path must be within vault", p))
+			continue
+		}
 
 		// Check source exists
 		if _, err := os.Stat(oldPath); os.IsNotExist(err) {
@@ -255,23 +288,32 @@ func (v *Vault) BulkMoveHandler(ctx context.Context, req *mcp.CallToolRequest, a
 			continue
 		}
 
-		// Move the file
-		if err := os.Rename(oldPath, newPath); err != nil {
-			errors = append(errors, fmt.Sprintf("%s: move failed", p))
-			continue
-		}
+		if !dryRun {
+			// Move the file
+			if err := os.Rename(oldPath, newPath); err != nil {
+				errors = append(errors, fmt.Sprintf("%s: move failed", p))
+				continue
+			}
 
-		// Update links if requested
-		if updateLinks {
-			oldName := strings.TrimSuffix(filename, ".md")
-			_ = v.updateLinksInVault(oldName, oldName)
+			// Update links if requested
+			if updateLinks {
+				oldName := strings.TrimSuffix(filename, ".md")
+				_ = v.updateLinksInVault(oldName, oldName)
+			}
 		}
-
-		results = append(results, fmt.Sprintf("%s -> %s", p, newRelPath))
+		if dryRun {
+			results = append(results, fmt.Sprintf("%s -> %s (dry run)", p, newRelPath))
+		} else {
+			results = append(results, fmt.Sprintf("%s -> %s", p, newRelPath))
+		}
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("# Bulk Move to %s\n\n", destination))
+	if dryRun {
+		sb.WriteString(fmt.Sprintf("# Dry Run: Bulk Move to %s\n\n", destination))
+	} else {
+		sb.WriteString(fmt.Sprintf("# Bulk Move to %s\n\n", destination))
+	}
 
 	if len(results) > 0 {
 		sb.WriteString("## Moved\n\n")
@@ -299,6 +341,7 @@ func (v *Vault) BulkSetFrontmatterHandler(ctx context.Context, req *mcp.CallTool
 	pathsStr := args.Paths
 	key := args.Key
 	value := args.Value
+	dryRun := args.DryRun
 
 	paths := parsePaths(pathsStr)
 	if len(paths) == 0 {
@@ -313,7 +356,11 @@ func (v *Vault) BulkSetFrontmatterHandler(ctx context.Context, req *mcp.CallTool
 			p += ".md"
 		}
 
-		fullPath := filepath.Join(v.path, p)
+		fullPath := filepath.Join(v.GetPath(), p)
+		if !v.isPathSafe(fullPath) {
+			errors = append(errors, fmt.Sprintf("%s: path must be within vault", p))
+			continue
+		}
 		content, err := os.ReadFile(fullPath)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("%s: read failed", p))
@@ -323,16 +370,25 @@ func (v *Vault) BulkSetFrontmatterHandler(ctx context.Context, req *mcp.CallTool
 		contentStr := string(content)
 		newContent := setFrontmatterKey(contentStr, key, value)
 
-		if err := os.WriteFile(fullPath, []byte(newContent), 0o600); err != nil {
-			errors = append(errors, fmt.Sprintf("%s: write failed", p))
-			continue
+		if !dryRun {
+			if err := os.WriteFile(fullPath, []byte(newContent), 0o600); err != nil {
+				errors = append(errors, fmt.Sprintf("%s: write failed", p))
+				continue
+			}
 		}
-
-		results = append(results, fmt.Sprintf("%s: set %s=%s", p, key, value))
+		if dryRun {
+			results = append(results, fmt.Sprintf("%s: would set %s=%s", p, key, value))
+		} else {
+			results = append(results, fmt.Sprintf("%s: set %s=%s", p, key, value))
+		}
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("# Bulk Set Frontmatter: %s\n\n", key))
+	if dryRun {
+		sb.WriteString(fmt.Sprintf("# Dry Run: Bulk Set Frontmatter: %s\n\n", key))
+	} else {
+		sb.WriteString(fmt.Sprintf("# Bulk Set Frontmatter: %s\n\n", key))
+	}
 
 	if len(results) > 0 {
 		sb.WriteString("## Updated\n\n")

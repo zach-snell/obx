@@ -1,0 +1,51 @@
+---
+title: CLI Overview
+description: Learn about the obx command-line interface.
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+While `obx` is primarily an MCP server, it also provides a powerful command-line interface for interacting with your Obsidian vault directly from your terminal. This is useful for scripting, quick lookups, or vault maintenance without needing an AI assistant.
+
+## Available Commands
+
+<CardGrid>
+  <LinkCard
+    title="obx search"
+    description="Full-text search across your vault with compact or detailed output."
+    href="/obx/cli/search"
+  />
+  <LinkCard
+    title="obx doctor"
+    description="Analyze your vault for broken links and orphaned notes."
+    href="/obx/cli/doctor"
+  />
+  <LinkCard
+    title="obx daily"
+    description="Quickly create or append to your daily note."
+    href="/obx/cli/daily"
+  />
+  <LinkCard
+    title="obx vault"
+    description="Manage your configured vault aliases globally."
+    href="/obx/cli/vault"
+  />
+  <LinkCard
+    title="obx serve"
+    description="Start the MCP server for AI clients."
+    href="/obx/getting-started/configuration"
+  />
+</CardGrid>
+
+## Global Flags
+
+All `obx` commands support the following global options:
+
+- `--help`, `-h`: Show help for a command.
+
+## Environment Variables
+
+You can configure `obx` behavior using environment variables to avoid passing flags repeatedly:
+
+- **`OBSIDIAN_VAULT_PATH`**: Sets the default vault path if one is not provided as an argument and no active vault is configured via `obx vault`.
+- **`OBSIDIAN_ADDR`**: Sets the HTTP address for `obx serve --http`.

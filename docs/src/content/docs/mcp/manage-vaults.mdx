@@ -1,0 +1,11 @@
+---
+title: manage-vaults
+description: Dynamically rotate the active vault handled by the server without restarting.
+---
+
+The `manage-vaults` MCP tool is only loaded if the `obx serve` process is launched with the `--allow-vault-switching` flag. It enables the AI assistant to swap workspaces over the wire.
+
+## Actions
+
+- `list`: Returns the currently active vault and an array of `--allowed-vaults` aliases.
+- `switch`: Unmounts the current vault and mounts a new one from the allowed alias pool.

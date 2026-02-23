@@ -41,13 +41,13 @@ jobs:
           for platform in "${platforms[@]}"; do
             GOOS="${platform%/*}"
             GOARCH="${platform#*/}"
-            output="obsidian-mcp-${GOOS}-${GOARCH}"
+            output="obx-${GOOS}-${GOARCH}"
             if [ "$GOOS" = "windows" ]; then
               output="${output}.exe"
             fi
             
             echo "Building $output..."
-            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -ldflags="-s -w" -o "dist/${output}" ./cmd/server
+            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -ldflags="-s -w" -o "dist/${output}" ./cmd/obx
           done
 
       - name: Create checksums

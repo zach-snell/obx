@@ -81,13 +81,13 @@ jobs:
           check-latest: true
 
       - name: Build
-        run: CGO_ENABLED=0 go build -o obsidian-mcp ./cmd/server
+        run: CGO_ENABLED=0 go build -o obx ./cmd/obx
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: obsidian-mcp-linux
-          path: obsidian-mcp
+          name: obx-linux
+          path: obx
 
   build-all:
     name: Build All Platforms
@@ -124,10 +124,10 @@ jobs:
         run: |
           ext=""
           if [ "$GOOS" = "windows" ]; then ext=".exe"; fi
-          go build -o obsidian-mcp-${{ matrix.goos }}-${{ matrix.goarch }}${ext} ./cmd/server
+          go build -o obx-${{ matrix.goos }}-${{ matrix.goarch }}${ext} ./cmd/obx
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: obsidian-mcp-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: obsidian-mcp-*
+          name: obx-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: obx-*

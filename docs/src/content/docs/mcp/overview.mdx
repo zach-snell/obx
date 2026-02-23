@@ -1,0 +1,92 @@
+---
+title: MCP Reference Overview
+description: Overview of the 14 multiplexed tools available directly in the Model Context Protocol.
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+While the core logic of `obx` supports over 70 distinct actions, exposing all of those to modern LLMs (like Claude or GPT-4o) frequently causes the intelligent agent to breach its hard tool limits when run alongside other MCP servers.
+
+To maximize stability and ensure your assistant can handle complex multi-server workflows, `obx` multiplexes these 70+ actions into **14 unified MCP Tools**.
+
+When your AI assistant needs to do something, it calls one of these 14 parent tools and passes an `action` argument (e.g. `action: "read"` vs `action: "write"`).
+
+## Unified Tool Groups
+
+<CardGrid>
+  <LinkCard
+    title="manage-notes"
+    description="Read, write, append, rename, duplicate, and move markdown notes."
+    href="/obx/mcp/manage-notes"
+  />
+  <LinkCard
+    title="manage-folders"
+    description="List, create, or delete directory structures."
+    href="/obx/mcp/manage-folders"
+  />
+  <LinkCard
+    title="search-vault"
+    description="Compact or detailed searches via queries, regex, tags, or fields."
+    href="/obx/mcp/search-vault"
+  />
+  <LinkCard
+    title="manage-frontmatter"
+    description="Read, set, or append properties, tags, and aliases."
+    href="/obx/mcp/manage-frontmatter"
+  />
+  <LinkCard
+    title="bulk-operations"
+    description="Batch tag, move, or modify properties across numerous files at once."
+    href="/obx/mcp/bulk-operations"
+  />
+  <LinkCard
+    title="manage-links"
+    description="Retrieve backlinks, forward links, or ask the AI to suggest connections."
+    href="/obx/mcp/manage-links"
+  />
+  <LinkCard
+    title="analyze-vault"
+    description="Find stubs, orphans, broken links, and outdated notes."
+    href="/obx/mcp/analyze-vault"
+  />
+  <LinkCard
+    title="manage-tasks"
+    description="Locate Markdown checkboxes and toggle their completion states."
+    href="/obx/mcp/manage-tasks"
+  />
+  <LinkCard
+    title="manage-periodic-notes"
+    description="Fetch or create daily, weekly, monthly, quarterly, or yearly notes."
+    href="/obx/mcp/manage-periodic-notes"
+  />
+  <LinkCard
+    title="manage-mocs"
+    description="Discover existing Maps of Content or automatically generate new index files."
+    href="/obx/mcp/manage-mocs"
+  />
+  <LinkCard
+    title="manage-templates"
+    description="List core templates and apply them dynamically."
+    href="/obx/mcp/manage-templates"
+  />
+  <LinkCard
+    title="manage-canvas"
+    description="Create notes and edges within Obsidian Canvas interface."
+    href="/obx/mcp/manage-canvas"
+  />
+  <LinkCard
+    title="edit-note"
+    description="Surgically alter notes via search/replace sequences or string batches."
+    href="/obx/mcp/edit-note"
+  />
+  <LinkCard
+    title="read-batch"
+    description="Ingest multiple notes at once, or extract specific headings for summaries."
+    href="/obx/mcp/read-batch"
+  />
+  <LinkCard
+    title="manage-vaults"
+    description="Dynamically rotate the active vault handled by the server without restarting."
+    href="/obx/mcp/manage-vaults"
+  />
+</CardGrid>

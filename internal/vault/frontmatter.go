@@ -62,9 +62,12 @@ func (v *Vault) QueryFrontmatterHandler(ctx context.Context, req *mcp.CallToolRe
 		return nil, nil, fmt.Errorf("invalid query format: use key=value or key:value")
 	}
 
-	searchPath := v.path
+	searchPath := v.GetPath()
 	if dir != "" {
-		searchPath = filepath.Join(v.path, dir)
+		searchPath = filepath.Join(v.GetPath(), dir)
+	}
+	if !v.isPathSafe(searchPath) {
+		return nil, nil, fmt.Errorf("search path must be within vault")
 	}
 
 	type result struct {
@@ -96,7 +99,7 @@ func (v *Vault) QueryFrontmatterHandler(ctx context.Context, req *mcp.CallToolRe
 		if fmValue, ok := fm[key]; ok {
 			// Support partial matching (contains)
 			if strings.Contains(strings.ToLower(fmValue), value) {
-				relPath, _ := filepath.Rel(v.path, path)
+				relPath, _ := filepath.Rel(v.GetPath(), path)
 				results = append(results, result{path: relPath, frontmatter: fm})
 			}
 		}
@@ -142,7 +145,7 @@ func (v *Vault) GetFrontmatterHandler(ctx context.Context, req *mcp.CallToolRequ
 		return nil, nil, fmt.Errorf("path must end with .md")
 	}
 
-	fullPath := filepath.Join(v.path, path)
+	fullPath := filepath.Join(v.GetPath(), path)
 
 	if !v.isPathSafe(fullPath) {
 		return nil, nil, fmt.Errorf("path must be within vault")

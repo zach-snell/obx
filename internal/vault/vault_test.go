@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -71,12 +72,36 @@ func TestNew(t *testing.T) {
 	v := New("./relative/../path")
 
 	// Should be an absolute path
-	if !filepath.IsAbs(v.path) {
-		t.Errorf("Vault path should be absolute, got: %s", v.path)
+	if !filepath.IsAbs(v.GetPath()) {
+		t.Errorf("Vault path should be absolute, got: %s", v.GetPath())
 	}
 
 	// Should not contain ..
-	if filepath.Clean(v.path) != v.path {
-		t.Errorf("Vault path should be clean, got: %s", v.path)
+	if filepath.Clean(v.GetPath()) != v.GetPath() {
+		t.Errorf("Vault path should be clean, got: %s", v.GetPath())
+	}
+}
+
+func TestIsPathSafeRejectsSymlinkEscape(t *testing.T) {
+	root := t.TempDir()
+	vaultDir := filepath.Join(root, "vault")
+	outsideDir := filepath.Join(root, "outside")
+
+	if err := os.MkdirAll(vaultDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(outsideDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	linkPath := filepath.Join(vaultDir, "escape")
+	if err := os.Symlink(outsideDir, linkPath); err != nil {
+		t.Skipf("symlink not supported in this environment: %v", err)
+	}
+
+	v := New(vaultDir)
+	target := filepath.Join(vaultDir, "escape", "hijack.md")
+	if v.isPathSafe(target) {
+		t.Fatalf("expected symlink escape path to be unsafe: %s", target)
 	}
 }
