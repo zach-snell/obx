@@ -15,8 +15,9 @@ import (
 )
 
 var serveCmd = &cobra.Command{
-	Use:   "serve [vault-path]",
-	Short: "Start the MCP server",
+	Use:     "mcp [vault-path]",
+	Aliases: []string{"serve"},
+	Short:   "Start the MCP server",
 	Long: `Start the Obsidian MCP server to allow AI assistants to 
 interact with your vault. Uses stdio transport by default, or HTTP streamable
 if --http is provided.`,

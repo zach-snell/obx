@@ -65,7 +65,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
   "mcpServers": {
     "obsidian": {
       "command": "/path/to/obx",
-      "args": ["serve", "/path/to/your/vault"]
+      "args": ["mcp", "/path/to/your/vault"]
     }
   }
 }
@@ -82,7 +82,7 @@ The server will be auto-discovered, or add to your config:
   "mcpServers": {
     "obsidian": {
       "command": "/path/to/obx",
-      "args": ["serve", "/path/to/your/vault"]
+      "args": ["mcp", "/path/to/your/vault"]
     }
   }
 }
@@ -96,9 +96,9 @@ Run as an HTTP server for remote access or multi-client setups:
 
 ```bash
 # Start HTTP server on port 8080
-obx serve /path/to/vault --http :8080
+obx mcp /path/to/vault --http :8080
 # or via env var
-OBSIDIAN_ADDR=:8080 obx serve /path/to/vault
+OBSIDIAN_ADDR=:8080 obx mcp /path/to/vault
 ```
 
 Then configure your MCP client to connect to `http://localhost:8080/mcp`.
@@ -109,7 +109,7 @@ Then configure your MCP client to connect to `http://localhost:8080/mcp`.
 
 ```bash
 # Run directly (communicates via stdio, default)
-obx serve /path/to/vault
+obx mcp /path/to/vault
 ```
 </details>
 
@@ -156,28 +156,28 @@ curl -sSL https://raw.githubusercontent.com/zach-snell/obx/main/install.sh | bas
 
 ## Advanced Server Configuration
 
-`obx serve` supports flags for strict access control and dynamic operations:
+`obx mcp` supports flags for strict access control and dynamic operations:
 
 ### Selective Tool Disablement
 
 If you don't want the AI assistant to access specific tools (e.g. bulk operations or deletion), you can blacklist entire tool groups using the `--disabled-tools` flag:
 
 ```bash
-obx serve /my/vault --disabled-tools manage-folders,bulk-operations,manage-frontmatter
+obx mcp /my/vault --disabled-tools manage-folders,bulk-operations,manage-frontmatter
 ```
 
 ### Dynamic Vault Switching
 
-By default, an `obx serve` instance is locked to a single vault path. If you want to allow an LLM to switch the active vault dynamically via the MCP protocol without restarting the server, enable it like this:
+By default, an `obx mcp` instance is locked to a single vault path. If you want to allow an LLM to switch the active vault dynamically via the MCP protocol without restarting the server, enable it like this:
 
 ```bash
-obx serve /my/vault --allow-vault-switching
+obx mcp /my/vault --allow-vault-switching
 ```
 
 To restrict which vaults the agent is allowed to switch to, first define aliases using setup commands like `obx vault add my-notes /path/to/notes`, then pass the allowed aliases to the server:
 
 ```bash
-obx serve /my/vault --allow-vault-switching --allowed-vaults my-notes,work,personal
+obx mcp /my/vault --allow-vault-switching --allowed-vaults my-notes,work,personal
 ```
 
 ---
@@ -386,7 +386,7 @@ A: Works fine. The server reads/writes standard markdown files.
 **Q: Can I use multiple vaults?**  
 A: Yes! You have two main options:
 1. Run multiple server instances, each pointing to a different vault on a different port.
-2. Register vaults globally via `obx vault add <alias> <path>` and run the server with `obx serve --allow-vault-switching --allowed-vaults <aliases...>`. This exposes a `manage-vaults` MCP tool allowing the AI assistant to switch between them dynamically.
+2. Register vaults globally via `obx vault add <alias> <path>` and run the server with `obx mcp --allow-vault-switching --allowed-vaults <aliases...>`. This exposes a `manage-vaults` MCP tool allowing the AI assistant to switch between them dynamically.
 
 ---
 

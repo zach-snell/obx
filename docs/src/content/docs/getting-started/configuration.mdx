@@ -16,7 +16,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
       "mcpServers": {
         "obsidian": {
           "command": "/usr/local/bin/obx",
-          "args": ["serve", "/path/to/your/vault"]
+          "args": ["mcp", "/path/to/your/vault"]
         }
       }
     }
@@ -32,7 +32,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
       "mcpServers": {
         "obsidian": {
           "command": "/usr/local/bin/obx",
-          "args": ["serve", "/path/to/your/vault"]
+          "args": ["mcp", "/path/to/your/vault"]
         }
       }
     }
@@ -42,13 +42,13 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
     Run as an HTTP server for remote access or multi-client setups:
 
     ```bash
-    obx serve /path/to/your/vault --http :8080
+    obx mcp /path/to/your/vault --http :8080
     ```
 
     Or via environment variable:
 
     ```bash
-    OBSIDIAN_ADDR=:8080 obx serve /path/to/your/vault
+    OBSIDIAN_ADDR=:8080 obx mcp /path/to/your/vault
     ```
 
     Then point your MCP client to `http://localhost:8080/mcp`.
@@ -57,7 +57,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
     The server communicates via stdio by default. Run it directly:
 
     ```bash
-    obx serve /path/to/your/vault
+    obx mcp /path/to/your/vault
     ```
 
     Configure your MCP client to spawn this process.
@@ -108,7 +108,7 @@ Then configure your MCP server to allow switching between them:
     "obsidian": {
       "command": "/usr/local/bin/obx",
       "args": [
-        "serve", 
+        "mcp", 
         "--allow-vault-switching", 
         "--allowed-vaults", "work,personal"
       ]
@@ -125,11 +125,11 @@ Alternatively, run multiple distinct server instances pointed at specific paths:
   "mcpServers": {
     "work-vault": {
       "command": "/usr/local/bin/obx",
-      "args": ["serve", "/path/to/work/vault"]
+      "args": ["mcp", "/path/to/work/vault"]
     },
     "personal-vault": {
       "command": "/usr/local/bin/obx",
-      "args": ["serve", "/path/to/personal/vault"]
+      "args": ["mcp", "/path/to/personal/vault"]
     }
   }
 }

@@ -48,10 +48,10 @@ obx vault switch my-notes
 
 ## Dynamic Vault Switching
 
-These aliases are not just for CLI convenience. If you want your AI assistant to switch between multiple vaults autonomously over the MCP protocol without restarting the server, you can pass these aliases to `obx serve`:
+These aliases are not just for CLI convenience. If you want your AI assistant to switch between multiple vaults autonomously over the MCP protocol without restarting the server, you can pass these aliases to `obx mcp`:
 
 ```bash
-obx serve --allow-vault-switching --allowed-vaults my-notes,work
+obx mcp --allow-vault-switching --allowed-vaults my-notes,work
 ```
 
 This ensures the agent can only access paths you have explicitly authorized.
