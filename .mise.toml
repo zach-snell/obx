@@ -39,6 +39,14 @@ run = "go test -fuzz=Fuzz${FUZZ_NAME:-ParseTask} -fuzztime=${FUZZ_TIME:-30s} ./i
 description = "Check for vulnerabilities"
 run = "govulncheck ./..."
 
+[tasks.install]
+description = "Build and install obx to ~/.local/bin"
+run = "./install.sh"
+
+[tasks.link]
+description = "Fast rebuild directly to ~/.local/bin/obx for rapid iteration"
+run = "go build -ldflags='-s -w' -o ~/.local/bin/obx ./cmd/obx"
+
 [tasks.check]
 description = "Run all checks (lint + test + vuln)"
 depends = ["lint", "test", "vuln"]
